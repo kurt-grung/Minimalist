@@ -1,0 +1,7 @@
+{
+  "buildCommand": "npm install --production=false && cd cms && npm install --production=false && npm run build && cd ../demo && npm install --production=false && npm run build",
+  "outputDirectory": "demo/.next",
+  "installCommand": "npm install --production=false",
+  "devCommand": "npm run dev",
+  "framework": "nextjs"
+}
