@@ -1,0 +1,22 @@
+{
+    "headers": [
+        {
+            "source": "/_next/static/chunks/(.*\\.js)",
+            "headers": [
+                {
+                    "key": "Content-Type",
+                    "value": "application/javascript; charset=utf-8"
+                }
+            ]
+        },
+        {
+            "source": "/_next/static/(.*\\.js)",
+            "headers": [
+                {
+                    "key": "Content-Type",
+                    "value": "application/javascript; charset=utf-8"
+                }
+            ]
+        }
+    ]
+}

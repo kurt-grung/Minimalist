@@ -1,0 +1,20 @@
+{
+  "name": "minimalist",
+  "version": "1.0.0",
+  "description": "Monorepo containing minimalist package and demo project",
+  "private": true,
+  "workspaces": [
+    "cms",
+    "demo"
+  ],
+  "scripts": {
+    "build": "npm run build:package && npm run install:demo",
+    "build:package": "cd cms && npm install && npm run build",
+    "install:demo": "cd demo && npm install",
+    "dev": "cd demo && npm run dev",
+    "dev:demo": "cd demo && npm run dev",
+    "test": "npm install --workspace=cms && npm test --workspace=cms",
+    "test:watch": "npm install --workspace=cms && npm run test:watch --workspace=cms",
+    "test:coverage": "npm install --workspace=cms && npm run test:coverage --workspace=cms"
+  }
+}
