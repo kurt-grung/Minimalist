@@ -1,0 +1,16 @@
+{
+  "name": "headless-cms",
+  "version": "1.0.0",
+  "description": "Monorepo containing headless-cms package and demo project",
+  "private": true,
+  "workspaces": [
+    "headless-cms",
+    "demo"
+  ],
+  "scripts": {
+    "build": "cd headless-cms && npm install --production=false && npm run build && cd ../demo && npm install --production=false && npm run build",
+    "dev": "cd demo && npm run dev",
+    "build:package": "cd headless-cms && npm run build",
+    "dev:demo": "cd demo && npm run dev"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "name": "headless-cms",
+  "version": "1.0.0",
+  "description": "A simple, file-based headless CMS for Next.js and Nuxt.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "headless-cms": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc && cp src/cli.js dist/cli.js && chmod +x dist/cli.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "cms",
+    "headless-cms",
+    "nextjs",
+    "nuxt",
+    "content-management",
+    "file-based",
+    "static-site"
+  ],
+  "author": "",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "gray-matter": "^4.0.3"
+  },
+  "peerDependencies": {
+    "@vercel/kv": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@vercel/kv": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/bcryptjs": "^2.4.3",
+    "@types/jsonwebtoken": "^9.0.2",
+    "typescript": "^5.0.0"
+  }
+}

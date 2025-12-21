@@ -1,0 +1,9 @@
+{
+  "id": "post-1766443672130",
+  "title": "Welcome to Your File-Based CMS!!! ",
+  "slug": "welcome",
+  "content": "This is an example post to show how the CMS works.\n\nContent is stored as JSON files in the /content/posts directory. When you build the site, Next.js reads these files and generates static HTML pages.\n\nYou can edit this post or create new ones through the admin panel at /admin.",
+  "excerpt": "Learn how this simple file-based CMS works",
+  "date": "2024-01-01T00:00:00.000Z",
+  "author": "Kurt"
+}
