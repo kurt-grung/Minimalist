@@ -3,7 +3,6 @@ import { getConfig } from '@/lib/config'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Footer from '@/components/Footer'
-import EditButton from '@/components/EditButton'
 
 export async function generateStaticParams() {
   const config = getConfig()
@@ -126,12 +125,9 @@ export default async function DynamicContentPage({ params }: { params: Promise<{
 
         <article style={{ background: 'white', padding: '3rem', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
           <header style={{ marginBottom: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-              <h1 style={{ fontSize: '2.5rem', margin: 0, flex: 1 }}>
-                {post.title}
-              </h1>
-              <EditButton slug={actualSlug} contentType="post" />
-            </div>
+            <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
+              {post.title}
+            </h1>
             <div style={{ color: '#666', fontSize: '0.9rem' }}>
               <time>{new Date(post.date).toLocaleDateString()}</time>
               {post.author && <span> • By {post.author}</span>}
@@ -185,12 +181,9 @@ export default async function DynamicContentPage({ params }: { params: Promise<{
 
       <article style={{ background: 'white', padding: '3rem', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
         <header style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-            <h1 style={{ fontSize: '2.5rem', margin: 0, flex: 1 }}>
-              {page.title}
-            </h1>
-            <EditButton slug={actualSlug} contentType="page" />
-          </div>
+          <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
+            {page.title}
+          </h1>
         </header>
 
         {page.content && /<[^>]+>/.test(page.content) ? (

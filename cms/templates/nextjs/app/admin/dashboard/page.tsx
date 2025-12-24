@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import ConfirmModal from '@/components/ConfirmModal'
+import RichTextEditor from '@/components/RichTextEditor'
 
 interface Post {
   id: string
@@ -25,26 +25,13 @@ interface SiteConfig {
 export default function AdminDashboard() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
-  const [isLocalhost, setIsLocalhost] = useState(false)
+  const [showNewPost, setShowNewPost] = useState(false)
+  const [editingPost, setEditingPost] = useState<Post | null>(null)
+  const [showSettings, setShowSettings] = useState(false)
   const [config, setConfig] = useState<SiteConfig>({ siteTitle: 'My Blog', siteSubtitle: 'Welcome to our simple file-based CMS', postRoute: 'posts', pageRoute: '' })
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; slug: string | null }>({ isOpen: false, slug: null })
-  const [errorModal, setErrorModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' })
   const router = useRouter()
 
   useEffect(() => {
-    // Check if we're on localhost
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname
-      const localhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.0.')
-      setIsLocalhost(localhost)
-      
-      if (!localhost) {
-        // Redirect to home if not on localhost
-        router.push('/')
-        return
-      }
-    }
-    
     checkAuth()
     loadPosts()
     loadSettings()
@@ -109,16 +96,12 @@ export default function AdminDashboard() {
     router.push('/admin')
   }
 
-  const handleDeleteClick = (slug: string) => {
-    setDeleteModal({ isOpen: true, slug })
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteModal.slug) return
+  const handleDelete = async (slug: string) => {
+    if (!confirm('Are you sure you want to delete this post?')) return
 
     try {
       const token = localStorage.getItem('admin_token')
-      const response = await fetch(`/api/posts/${deleteModal.slug}`, {
+      const response = await fetch(`/api/posts/${slug}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -126,25 +109,13 @@ export default function AdminDashboard() {
       })
 
       if (response.ok) {
-        setDeleteModal({ isOpen: false, slug: null })
         loadPosts()
       } else {
-        setDeleteModal({ isOpen: false, slug: null })
-        setErrorModal({ isOpen: true, message: 'Failed to delete post' })
+        alert('Failed to delete post')
       }
     } catch (err) {
-      setDeleteModal({ isOpen: false, slug: null })
-      setErrorModal({ isOpen: true, message: 'Error deleting post' })
+      alert('Error deleting post')
     }
-  }
-
-  const handleDeleteCancel = () => {
-    setDeleteModal({ isOpen: false, slug: null })
-  }
-
-  // Don't render if not on localhost
-  if (!isLocalhost) {
-    return null
   }
 
   if (loading) {
@@ -168,8 +139,8 @@ export default function AdminDashboard() {
           <Link href="/" style={{ color: '#0070f3' }}>View Site</Link>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
-          <Link
-            href="/admin/dashboard/settings"
+          <button
+            onClick={() => setShowSettings(true)}
             style={{
               padding: '0.75rem 1.5rem',
               background: '#28a745',
@@ -177,15 +148,13 @@ export default function AdminDashboard() {
               border: 'none',
               borderRadius: '6px',
               fontSize: '1rem',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-block'
+              cursor: 'pointer'
             }}
           >
             Settings
-          </Link>
-          <Link
-            href="/admin/dashboard/new"
+          </button>
+          <button
+            onClick={() => setShowNewPost(true)}
             style={{
               padding: '0.75rem 1.5rem',
               background: '#0070f3',
@@ -193,13 +162,11 @@ export default function AdminDashboard() {
               border: 'none',
               borderRadius: '6px',
               fontSize: '1rem',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-block'
+              cursor: 'pointer'
             }}
           >
             New Post
-          </Link>
+          </button>
           <button
             onClick={handleLogout}
             style={{
@@ -216,6 +183,37 @@ export default function AdminDashboard() {
           </button>
         </div>
       </header>
+
+      {showNewPost && (
+        <PostEditor
+          config={config}
+          onClose={() => {
+            setShowNewPost(false)
+            loadPosts()
+          }}
+        />
+      )}
+
+      {editingPost && (
+        <PostEditor
+          post={editingPost}
+          config={config}
+          onClose={() => {
+            setEditingPost(null)
+            loadPosts()
+          }}
+        />
+      )}
+
+      {showSettings && (
+        <SettingsEditor
+          config={config}
+          onClose={() => {
+            setShowSettings(false)
+            loadSettings()
+          }}
+        />
+      )}
 
       <section>
         <h2 style={{ marginBottom: '1.5rem', fontSize: '1.5rem' }}>Posts</h2>
@@ -265,8 +263,8 @@ export default function AdminDashboard() {
                   >
                     View
                   </Link>
-                  <Link
-                    href={`/admin/dashboard/edit/${encodeURIComponent(post.slug)}`}
+                  <button
+                    onClick={() => setEditingPost(post)}
                     style={{
                       padding: '0.5rem 1rem',
                       background: '#0070f3',
@@ -274,14 +272,13 @@ export default function AdminDashboard() {
                       border: 'none',
                       borderRadius: '6px',
                       fontSize: '0.9rem',
-                      textDecoration: 'none',
-                      display: 'inline-block'
+                      cursor: 'pointer'
                     }}
                   >
                     Edit
-                  </Link>
+                  </button>
                   <button
-                    onClick={() => handleDeleteClick(post.slug)}
+                    onClick={() => handleDelete(post.slug)}
                     style={{
                       padding: '0.5rem 1rem',
                       background: '#dc3545',
@@ -300,28 +297,302 @@ export default function AdminDashboard() {
           </div>
         )}
       </section>
-
-      <ConfirmModal
-        isOpen={deleteModal.isOpen}
-        title="Delete Post"
-        message="Are you sure you want to delete this post? This action cannot be undone."
-        confirmText="Delete"
-        cancelText="Cancel"
-        onConfirm={handleDeleteConfirm}
-        onCancel={handleDeleteCancel}
-        variant="danger"
-      />
-
-      <ConfirmModal
-        isOpen={errorModal.isOpen}
-        title="Error"
-        message={errorModal.message}
-        confirmText="OK"
-        onConfirm={() => setErrorModal({ isOpen: false, message: '' })}
-        onCancel={() => setErrorModal({ isOpen: false, message: '' })}
-        variant="info"
-      />
     </main>
+  )
+}
+
+function PostEditor({ post, config, onClose }: { post?: Post; config: SiteConfig; onClose: () => void }) {
+  const [title, setTitle] = useState(post?.title || '')
+  const [slug, setSlug] = useState(post?.slug || '')
+  const [content, setContent] = useState(post?.content || '')
+  const [excerpt, setExcerpt] = useState(post?.excerpt || '')
+  const [author, setAuthor] = useState(post?.author || '')
+  const [saving, setSaving] = useState(false)
+  const isEditing = !!post
+  const slugChanged = isEditing && slug !== post.slug
+  const postRoute = config.postRoute !== undefined && config.postRoute !== null ? config.postRoute : 'posts'
+  const postRouteCapitalized = postRoute ? (postRoute.charAt(0).toUpperCase() + postRoute.slice(1)) : ''
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+
+    try {
+      const token = localStorage.getItem('admin_token')
+      const finalSlug = slug || title.toLowerCase().replace(/\s+/g, '-')
+      
+      // If editing and slug changed, we need to create new and delete old
+      if (isEditing && slugChanged) {
+        // Create new post with new slug
+        const createResponse = await fetch('/api/posts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            title,
+            slug: finalSlug,
+            content,
+            excerpt,
+            author,
+            date: post.date // Preserve original date
+          })
+        })
+
+        if (!createResponse.ok) {
+          const data = await createResponse.json()
+          alert(data.error || 'Failed to create new post')
+          setSaving(false)
+          return
+        }
+
+        // Delete old post
+        const deleteResponse = await fetch(`/api/posts/${post.slug}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (!deleteResponse.ok) {
+          alert('New post created but failed to delete old post. Please delete it manually.')
+        }
+      } else {
+        // Normal update or create
+        const url = isEditing ? `/api/posts/${post.slug}` : '/api/posts'
+        const method = isEditing ? 'PUT' : 'POST'
+        
+        const response = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            title,
+            slug: finalSlug,
+            content,
+            excerpt,
+            author,
+            date: isEditing ? post.date : new Date().toISOString()
+          })
+        })
+
+        if (!response.ok) {
+          const data = await response.json()
+          alert(data.error || `Failed to ${isEditing ? 'update' : 'save'} post`)
+          setSaving(false)
+          return
+        }
+      }
+
+      onClose()
+    } catch (err) {
+      alert(`Error ${isEditing ? 'updating' : 'saving'} post`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0,0,0,0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '2rem'
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '12px',
+        padding: '2rem',
+        width: '100%',
+        maxWidth: '800px',
+        maxHeight: '90vh',
+        overflow: 'auto'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+          <div>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>
+              {isEditing ? `Edit ${postRouteCapitalized || 'Post'}` : `New ${postRouteCapitalized || 'Post'}`}
+            </h2>           
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '1.5rem',
+              cursor: 'pointer',
+              color: '#666'
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              Title *
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '1rem'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              Slug {isEditing && <span style={{ color: '#999', fontSize: '0.9rem' }}>(changing slug will create a new {postRouteCapitalized || 'post'})</span>}
+            </label>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              marginBottom: '0.5rem',
+              padding: '0.5rem',
+              background: '#f5f5f5',
+              borderRadius: '4px',
+              fontSize: '0.9rem',
+              color: '#666'
+            }}>
+              <span style={{ fontWeight: '500' }}>{postRouteCapitalized || 'Post'} Route Prefix:</span>
+              <span style={{ 
+                background: 'white', 
+                padding: '0.25rem 0.5rem', 
+                borderRadius: '4px',
+                fontFamily: 'monospace'
+              }}>
+                {postRoute ? `/${postRoute}/` : '(root)'}
+              </span>
+            </div>
+            <input
+              type="text"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              placeholder="my-post-title"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: slugChanged ? '2px solid #ff9800' : '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                backgroundColor: 'white',
+                cursor: 'text'
+              }}
+            />
+            <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
+              URL will be: <span style={{ fontFamily: 'monospace', color: '#0070f3' }}>
+                {postRoute ? `/${postRoute}/${slug || 'your-slug'}` : `/${slug || 'your-slug'}`}
+              </span>
+            </p>
+            {isEditing && (
+              <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: slugChanged ? '#ff9800' : '#666' }}>
+                {slugChanged 
+                  ? `⚠️ Changing the slug will create a new ${postRouteCapitalized || 'post'} and delete the old one.`
+                  : `Note: Changing the slug will create a new ${postRouteCapitalized || 'post'} and delete the old one.`}
+              </p>
+            )}
+          </div>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              Excerpt
+            </label>
+            <input
+              type="text"
+              value={excerpt}
+              onChange={(e) => setExcerpt(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '1rem'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              Author
+            </label>
+            <input
+              type="text"
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '1rem'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              Content *
+            </label>
+            <RichTextEditor
+              content={content}
+              onChange={setContent}
+              placeholder="Start writing your content..."
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: '#f0f0f0',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: saving ? '#ccc' : '#0070f3',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                cursor: saving ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {saving ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? `Update ${postRouteCapitalized || 'Post'}` : `Save ${postRouteCapitalized || 'Post'}`)}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
 
@@ -331,24 +602,6 @@ function SettingsEditor({ config, onClose }: { config: SiteConfig; onClose: () =
   const [postRoute, setPostRoute] = useState(config.postRoute !== undefined ? config.postRoute : 'posts')
   const [pageRoute, setPageRoute] = useState(config.pageRoute !== undefined ? config.pageRoute : '')
   const [saving, setSaving] = useState(false)
-
-  // Handle ESC key press
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleEsc)
-    return () => window.removeEventListener('keydown', handleEsc)
-  }, [])
-
-  // Handle backdrop click
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      onClose()
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -384,34 +637,28 @@ function SettingsEditor({ config, onClose }: { config: SiteConfig; onClose: () =
   }
 
   return (
-    <div 
-      onClick={handleBackdropClick}
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '2rem'
-      }}
-    >
-      <div 
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: 'white',
-          borderRadius: '12px',
-          padding: '2rem',
-          width: '100%',
-          maxWidth: '600px',
-          maxHeight: '90vh',
-          overflow: 'auto'
-        }}
-      >
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0,0,0,0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '2rem'
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '12px',
+        padding: '2rem',
+        width: '100%',
+        maxWidth: '600px',
+        maxHeight: '90vh',
+        overflow: 'auto'
+      }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
           <h2 style={{ fontSize: '1.5rem' }}>Site Settings</h2>
           <button

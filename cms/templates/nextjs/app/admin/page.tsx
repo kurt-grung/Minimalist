@@ -8,34 +8,15 @@ export default function AdminLogin() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isLocalhost, setIsLocalhost] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
-    // Check if we're on localhost
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname
-      const localhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.0.')
-      setIsLocalhost(localhost)
-      
-      if (!localhost) {
-        // Redirect to home if not on localhost
-        router.push('/')
-        return
-      }
-      
-      // Check if already logged in
-      const token = localStorage.getItem('admin_token')
-      if (token) {
-        router.push('/admin/dashboard')
-      }
+    // Check if already logged in
+    const token = localStorage.getItem('admin_token')
+    if (token) {
+      router.push('/admin/dashboard')
     }
   }, [router])
-
-  // Don't render login form if not on localhost
-  if (!isLocalhost) {
-    return null
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

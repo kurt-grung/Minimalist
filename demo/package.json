@@ -15,7 +15,7 @@
     "@vercel/kv": "^1.0.0",
     "bcryptjs": "^2.4.3",
     "gray-matter": "^4.0.3",
-    "headless-cms": "file:../headless-cms",
+    "headless-cms": "file:../cms",
     "jsonwebtoken": "^9.0.2",
     "next": "^16.0.10",
     "react": "^19.0.0",
@@ -27,6 +27,9 @@
     "@types/node": "^20.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
     "typescript": "^5.0.0"
   }
 }

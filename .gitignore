@@ -41,3 +41,4 @@ next-env.d.ts
 # Note: users.json is committed for Vercel deployments (read-only filesystem)
 # users.json
 
+docs/**
