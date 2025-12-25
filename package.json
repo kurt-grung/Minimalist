@@ -1,7 +1,7 @@
 {
-  "name": "headless-cms",
+  "name": "minimalist",
   "version": "1.0.0",
-  "description": "Monorepo containing headless-cms package and demo project",
+  "description": "Monorepo containing minimalist package and demo project",
   "private": true,
   "workspaces": [
     "cms",
@@ -12,6 +12,9 @@
     "build:package": "cd cms && npm install && npm run build",
     "install:demo": "cd demo && npm install",
     "dev": "cd demo && npm run dev",
-    "dev:demo": "cd demo && npm run dev"
+    "dev:demo": "cd demo && npm run dev",
+    "test": "cd cms && npm test",
+    "test:watch": "cd cms && npm run test:watch",
+    "test:coverage": "cd cms && npm run test:coverage"
   }
 }

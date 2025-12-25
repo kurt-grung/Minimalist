@@ -1,8 +1,8 @@
-# Headless CMS - Complete Integration Guide
+# Minimalist - Complete Integration Guide
 
 ## ✅ What Gets Installed
 
-When you run `npx headless-cms init`, the package automatically sets up a **complete, working CMS** in your Next.js project. Here's everything that gets added:
+When you run `npx minimalist init`, the package automatically sets up a **complete, working CMS** in your Next.js project. Here's everything that gets added:
 
 ### 📁 Files Created
 
@@ -48,12 +48,12 @@ When you run `npx headless-cms init`, the package automatically sets up a **comp
 
 ### Step 1: Install Package
 ```bash
-npm install headless-cms
+npm install minimalist
 ```
 
 ### Step 2: Initialize CMS
 ```bash
-npx headless-cms init
+npx minimalist init
 ```
 
 This command:
@@ -121,10 +121,10 @@ Visit `http://localhost:3000/admin`
 
 ## 📦 Package Structure
 
-The `headless-cms` package includes:
+The `minimalist` package includes:
 
 ```
-headless-cms/
+minimalist/
 ├── dist/              # Compiled JavaScript
 ├── templates/         # Template files (copied on init)
 │   └── nextjs/
@@ -139,7 +139,7 @@ headless-cms/
 ## 🔧 How It Works
 
 1. **Package Installation**: The npm package contains the CLI tool and templates
-2. **Initialization**: `npx headless-cms init` copies templates to your project
+2. **Initialization**: `npx minimalist init` copies templates to your project
 3. **Library Files**: Core functionality is copied as local files (not imported from package)
 4. **Dependencies**: You install required npm packages separately
 5. **Ready to Use**: Everything works immediately after dependencies are installed

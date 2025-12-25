@@ -6,8 +6,8 @@
 
 ```bash
 # In your Next.js project
-npm install headless-cms
-npx headless-cms init
+npm install minimalist
+npx minimalist init
 npm run dev
 ```
 
@@ -21,7 +21,7 @@ If you prefer to set up manually:
 
 1. **Install the package:**
 ```bash
-npm install headless-cms
+npm install minimalist
 ```
 
 2. **Create API routes:**
@@ -68,7 +68,7 @@ To test the package locally in the demo project:
 npm link
 
 # From root directory
-npm link headless-cms
+npm link minimalist
 ```
 
 ### Publishing

@@ -9,8 +9,8 @@ if (command === 'init') {
   init().catch(console.error)
 } else {
   console.log(`
-Usage: headless-cms init
+Usage: minimalist init
 
-This will set up the headless CMS in your Next.js project.
+This will set up the minimalist CMS in your Next.js project.
 `)
 }

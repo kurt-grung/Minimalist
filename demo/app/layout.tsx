@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Headless',
+  title: 'Minimalist',
   description: 'Minimalist headless CMS, no backend.',
 }
 

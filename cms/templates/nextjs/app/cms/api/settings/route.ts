@@ -9,7 +9,7 @@ function getAuthToken(request: NextRequest): string | null {
   return authHeader.substring(7)
 }
 
-// GET /api/settings - Get site configuration
+// GET /cms/api/settings - Get site configuration
 export async function GET() {
   try {
     const config = getConfig()
@@ -22,7 +22,7 @@ export async function GET() {
   }
 }
 
-// PUT /api/settings - Update site configuration
+// PUT /cms/api/settings - Update site configuration
 export async function PUT(request: NextRequest) {
   try {
     const token = getAuthToken(request)

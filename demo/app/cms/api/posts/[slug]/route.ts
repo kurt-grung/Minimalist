@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { deletePost, getPostBySlug, savePost, Post, verifyToken } from 'minimalist'
+import { deletePost, getPostBySlug, savePost, Post } from '@/lib/content'
+import { verifyToken } from '@/lib/auth'
 
 function getAuthToken(request: NextRequest): string | null {
   const authHeader = request.headers.get('authorization')
@@ -9,7 +10,7 @@ function getAuthToken(request: NextRequest): string | null {
   return authHeader.substring(7)
 }
 
-// DELETE /api/posts/[slug] - Delete post
+// DELETE /cms/api/posts/[slug] - Delete post
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -49,7 +50,7 @@ export async function DELETE(
   }
 }
 
-// PUT /api/posts/[slug] - Update post
+// PUT /cms/api/posts/[slug] - Update post
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }

@@ -1,11 +1,11 @@
 {
-  "name": "headless-cms",
+  "name": "minimalist",
   "version": "1.0.0",
   "description": "A simple, file-based headless CMS for Next.js and Nuxt.js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "headless-cms": "./dist/cli.js"
+    "minimalist": "./dist/cli.js"
   },
   "exports": {
     ".": {
@@ -16,11 +16,15 @@
   },
   "scripts": {
     "build": "tsc && cp src/cli.js dist/cli.js && chmod +x dist/cli.js",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": [
     "cms",
     "headless-cms",
+    "minimalist",
     "nextjs",
     "nuxt",
     "content-management",
@@ -50,6 +54,8 @@
     "@types/node": "^20.0.0",
     "@types/bcryptjs": "^2.4.3",
     "@types/jsonwebtoken": "^9.0.2",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0",
+    "@vitest/coverage-v8": "^1.0.0"
   }
 }

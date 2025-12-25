@@ -9,7 +9,7 @@ function getAuthToken(request: NextRequest): string | null {
   return authHeader.substring(7)
 }
 
-// GET /api/posts - Get all posts
+// GET /cms/api/posts - Get all posts
 export async function GET() {
   try {
     const posts = await getAllPosts()
@@ -22,7 +22,7 @@ export async function GET() {
   }
 }
 
-// POST /api/posts - Create new post
+// POST /cms/api/posts - Create new post
 export async function POST(request: NextRequest) {
   try {
     const token = getAuthToken(request)

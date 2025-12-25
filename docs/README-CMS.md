@@ -1,11 +1,11 @@
-# Headless CMS
+# Minimalist
 
 A simple, file-based headless CMS package for Next.js and Nuxt.js projects.
 
 ## Installation
 
 ```bash
-npm install headless-cms
+npm install minimalist
 ```
 
 ## Quick Start
@@ -15,7 +15,7 @@ npm install headless-cms
 1. Initialize the CMS in your Next.js project:
 
 ```bash
-npx headless-cms init
+npx minimalist init
 ```
 
 2. Start your development server:
@@ -37,7 +37,7 @@ npm run dev
 ### Import the library
 
 ```typescript
-import { getAllPosts, getPostBySlug, savePost, Post } from 'headless-cms'
+import { getAllPosts, getPostBySlug, savePost, Post } from 'minimalist'
 ```
 
 ### Get all posts
@@ -64,7 +64,7 @@ await savePost(post)
 
 ## API Reference
 
-See the full documentation in the [package README](./README.md) or check out the [demo project](../headless-cms-demo/) for examples.
+See the full documentation in the [package README](./README.md) or check out the [demo project](../minimalist-demo/) for examples.
 
 ## License
 

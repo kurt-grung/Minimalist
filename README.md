@@ -1,4 +1,4 @@
-# Minimalist, Headless CMS
+# Minimalist 
 
 Minimalist, Headless CMS, No backend.
 
@@ -6,15 +6,15 @@ Minimalist, Headless CMS, No backend.
 
 ```
 headless/
-├── cms/                  # 📦 The npm package
-│   ├── src/              # TypeScript source
-│   ├── templates/        # Framework templates
+├── cms/                  # Package
+│   ├── src/              # Source
+│   ├── templates/        # Templates
 │   └── package.json
 │
-└── demo/                 # 🎨 Demo/Example project
-    ├── app/              # Next.js app
-    ├── lib/              # Local library
-    └── package.json      # References ../cms
+└── demo/                 # Example 
+    ├── app/              # App
+    ├── lib/              # Library
+    └── package.json
 ```
 
 ## Quick Start
@@ -42,7 +42,7 @@ npm install
 npm run dev
 ```
 
-Visit `http://localhost:3000/admin` (default: admin/admin123)
+Visit `http://localhost:3000/cms` (default: admin/admin123)
 
 ## Using the Package
 

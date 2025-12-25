@@ -14,15 +14,15 @@ async function init() {
     }
     else {
         console.log(`
-Usage: headless-cms init
+Usage: minimalist init
 
-This will set up the headless CMS in your Next.js project.
+This will set up the minimalist CMS in your Next.js project.
 `);
     }
 }
 async function initProject() {
     const cwd = process.cwd();
-    console.log('🚀 Initializing headless CMS...\n');
+    console.log('🚀 Initializing minimalist CMS...\n');
     // Check if this is a Next.js project
     const packageJsonPath = path_1.default.join(cwd, 'package.json');
     if (!fs_1.default.existsSync(packageJsonPath)) {
@@ -35,17 +35,17 @@ async function initProject() {
         process.exit(1);
     }
     // Get template directory (relative to package root)
-    // When installed via npm, templates are in node_modules/headless-cms/templates
-    // When running from source, they're in packages/headless-cms/templates
+    // When installed via npm, templates are in node_modules/minimalist/templates
+    // When running from source, they're in packages/minimalist/templates
     // When compiled, __dirname is dist/cli, so we go up to package root
     let templateDir = path_1.default.join(__dirname, '../../templates/nextjs');
     // If not found, try node_modules location (when installed via npm)
     if (!fs_1.default.existsSync(templateDir)) {
-        templateDir = path_1.default.join(cwd, 'node_modules/headless-cms/templates/nextjs');
+        templateDir = path_1.default.join(cwd, 'node_modules/minimalist/templates/nextjs');
     }
     // If still not found, try relative to current working directory (for local dev)
     if (!fs_1.default.existsSync(templateDir)) {
-        const localTemplateDir = path_1.default.join(cwd, 'packages/headless-cms/templates/nextjs');
+        const localTemplateDir = path_1.default.join(cwd, 'packages/minimalist/templates/nextjs');
         if (fs_1.default.existsSync(localTemplateDir)) {
             templateDir = localTemplateDir;
         }
@@ -53,14 +53,14 @@ async function initProject() {
     if (!fs_1.default.existsSync(templateDir)) {
         console.warn('⚠️  Warning: Template directory not found. Some files may not be copied.');
         console.warn(`   Tried: ${path_1.default.join(__dirname, '../../templates/nextjs')}`);
-        console.warn(`   Tried: ${path_1.default.join(cwd, 'node_modules/headless-cms/templates/nextjs')}`);
+        console.warn(`   Tried: ${path_1.default.join(cwd, 'node_modules/minimalist/templates/nextjs')}`);
     }
-    // Copy API routes
-    const apiDir = path_1.default.join(cwd, 'app/api');
-    if (!fs_1.default.existsSync(apiDir)) {
-        fs_1.default.mkdirSync(apiDir, { recursive: true });
+    // Copy CMS routes (all under /cms)
+    const cmsDir = path_1.default.join(cwd, 'app/cms');
+    if (!fs_1.default.existsSync(cmsDir)) {
+        fs_1.default.mkdirSync(cmsDir, { recursive: true });
     }
-    // Copy API route templates
+    // Copy template files
     const copyTemplate = (templatePath, targetPath) => {
         const fullTemplatePath = path_1.default.join(templateDir, templatePath);
         const fullTargetPath = path_1.default.join(cwd, targetPath);
@@ -75,31 +75,35 @@ async function initProject() {
         return false;
     };
     const copiedRoutes = [];
-    if (copyTemplate('app/api/auth/login/route.ts', 'app/api/auth/login/route.ts')) {
-        copiedRoutes.push('app/api/auth/login/route.ts');
+    // Copy CMS API routes
+    if (copyTemplate('app/cms/api/route.ts', 'app/cms/api/route.ts')) {
+        copiedRoutes.push('app/cms/api/route.ts');
     }
-    if (copyTemplate('app/api/posts/route.ts', 'app/api/posts/route.ts')) {
-        copiedRoutes.push('app/api/posts/route.ts');
+    if (copyTemplate('app/cms/api/auth/login/route.ts', 'app/cms/api/auth/login/route.ts')) {
+        copiedRoutes.push('app/cms/api/auth/login/route.ts');
     }
-    if (copyTemplate('app/api/posts/[slug]/route.ts', 'app/api/posts/[slug]/route.ts')) {
-        copiedRoutes.push('app/api/posts/[slug]/route.ts');
+    if (copyTemplate('app/cms/api/posts/route.ts', 'app/cms/api/posts/route.ts')) {
+        copiedRoutes.push('app/cms/api/posts/route.ts');
     }
-    if (copyTemplate('app/api/settings/route.ts', 'app/api/settings/route.ts')) {
-        copiedRoutes.push('app/api/settings/route.ts');
+    if (copyTemplate('app/cms/api/posts/[slug]/route.ts', 'app/cms/api/posts/[slug]/route.ts')) {
+        copiedRoutes.push('app/cms/api/posts/[slug]/route.ts');
+    }
+    if (copyTemplate('app/cms/api/settings/route.ts', 'app/cms/api/settings/route.ts')) {
+        copiedRoutes.push('app/cms/api/settings/route.ts');
     }
     if (copiedRoutes.length > 0) {
-        console.log(`✅ Created ${copiedRoutes.length} API route(s)`);
+        console.log(`✅ Created ${copiedRoutes.length} CMS API route(s)`);
     }
-    // Copy admin pages
-    const copiedAdmin = [];
-    if (copyTemplate('app/admin/page.tsx', 'app/admin/page.tsx')) {
-        copiedAdmin.push('app/admin/page.tsx');
+    // Copy CMS pages
+    const copiedCms = [];
+    if (copyTemplate('app/cms/page.tsx', 'app/cms/page.tsx')) {
+        copiedCms.push('app/cms/page.tsx');
     }
-    if (copyTemplate('app/admin/dashboard/page.tsx', 'app/admin/dashboard/page.tsx')) {
-        copiedAdmin.push('app/admin/dashboard/page.tsx');
+    if (copyTemplate('app/cms/dashboard/page.tsx', 'app/cms/dashboard/page.tsx')) {
+        copiedCms.push('app/cms/dashboard/page.tsx');
     }
-    if (copiedAdmin.length > 0) {
-        console.log(`✅ Created ${copiedAdmin.length} admin page(s)`);
+    if (copiedCms.length > 0) {
+        console.log(`✅ Created ${copiedCms.length} CMS page(s)`);
     }
     // Copy lib files (required for CMS functionality)
     const libDir = path_1.default.join(cwd, 'lib');
@@ -228,7 +232,7 @@ async function initProject() {
     const gitignorePath = path_1.default.join(cwd, '.gitignore');
     let gitignore = fs_1.default.existsSync(gitignorePath) ? fs_1.default.readFileSync(gitignorePath, 'utf-8') : '';
     if (!gitignore.includes('users.json')) {
-        gitignore += '\n# Headless CMS\n# users.json should be committed for production\n# content/ directory can be committed or ignored\n';
+        gitignore += '\n# Minimalist CMS\n# users.json should be committed for production\n# content/ directory can be committed or ignored\n';
         fs_1.default.writeFileSync(gitignorePath, gitignore);
         console.log('✅ Updated .gitignore');
     }
@@ -284,12 +288,12 @@ async function initProject() {
         console.log('✅ Created tsconfig.json with path alias configuration');
     }
     console.log('\n✨ Setup complete!');
-    // Check if headless-cms is already in package.json (local dev or already installed)
-    const hasPackage = packageJson.dependencies?.['headless-cms'] || packageJson.devDependencies?.['headless-cms'];
+    // Check if minimalist is already in package.json (local dev or already installed)
+    const hasPackage = packageJson.dependencies?.['minimalist'] || packageJson.devDependencies?.['minimalist'];
     console.log('\n✨ Setup complete!');
     console.log('\n📦 Next steps:');
     if (!hasPackage) {
-        console.log('1. Install the package: npm install headless-cms');
+        console.log('1. Install the package: npm install minimalist');
     }
     console.log(`${!hasPackage ? '2' : '1'}. Install core dependencies:`);
     console.log('   npm install bcryptjs jsonwebtoken');
@@ -298,7 +302,7 @@ async function initProject() {
     console.log('   npm install -D tailwindcss postcss autoprefixer');
     console.log('   npx tailwindcss init -p');
     console.log(`${!hasPackage ? '4' : '3'}. Start your dev server: npm run dev`);
-    console.log(`${!hasPackage ? '5' : '4'}. Visit /admin to access the admin panel`);
+    console.log(`${!hasPackage ? '5' : '4'}. Visit /cms to access the CMS`);
     console.log(`   Default credentials: admin / admin123`);
     console.log('\n⚠️  Remember to change the default password in production!');
     console.log('\n💡 Features included:');

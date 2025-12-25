@@ -1,6 +1,6 @@
-# Headless CMS - Demo Project
+# Minimalist - Demo Project
 
-This is a **demo and example project** showing how to use the Headless CMS package.
+This is a **demo and example project** showing how to use the Minimalist CMS package.
 
 ## Quick Start
 
@@ -22,17 +22,17 @@ npm run dev
 
 ## Using the Package
 
-This demo uses the local `headless-cms` package. In your own projects, install it via npm:
+This demo uses the local `minimalist` package. In your own projects, install it via npm:
 
 ```bash
-npm install headless-cms
-npx headless-cms init
+npm install minimalist
+npx minimalist init
 ```
 
 ## Project Structure
 
 ```
-headless-cms-demo/
+minimalist-demo/
 ├── app/              # Next.js app
 │   ├── admin/       # Admin interface
 │   ├── api/         # API routes
