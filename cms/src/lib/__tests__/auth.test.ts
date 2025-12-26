@@ -2,10 +2,12 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
-// Mock fs module BEFORE importing the module under test
-const mockExistsSync = vi.fn()
-const mockReadFileSync = vi.fn()
-const mockWriteFileSync = vi.fn()
+// Use vi.hoisted() to create mocks that can be referenced in vi.mock()
+const { mockExistsSync, mockReadFileSync, mockWriteFileSync } = vi.hoisted(() => ({
+  mockExistsSync: vi.fn(),
+  mockReadFileSync: vi.fn(),
+  mockWriteFileSync: vi.fn(),
+}))
 
 vi.mock('fs', () => ({
   default: {
@@ -182,19 +184,25 @@ describe('auth', () => {
 
   describe('createToken', () => {
     it('should create a valid JWT token', () => {
-      process.env.JWT_SECRET = 'test-secret'
+      // Note: SECRET is evaluated at module load time, so we test with the actual secret
+      // If JWT_SECRET was set before module load, it would use that
       const username = 'admin'
+      const originalSecret = process.env.JWT_SECRET
+      delete process.env.JWT_SECRET
 
       const token = createToken(username)
 
       expect(token).toBeDefined()
       expect(typeof token).toBe('string')
-      const decoded = jwt.verify(token, 'test-secret') as { username: string }
+      // Use the default secret since JWT_SECRET wasn't set at module load
+      const decoded = jwt.verify(token, 'your-secret-key-change-in-production') as {
+        username: string
+      }
       expect(decoded.username).toBe(username)
+      if (originalSecret) process.env.JWT_SECRET = originalSecret
     })
 
     it('should use default secret if JWT_SECRET is not set', () => {
-      delete process.env.JWT_SECRET
       const username = 'admin'
 
       const token = createToken(username)
@@ -209,9 +217,10 @@ describe('auth', () => {
 
   describe('verifyToken', () => {
     it('should return decoded token for valid token', () => {
-      process.env.JWT_SECRET = 'test-secret'
+      // Note: SECRET is evaluated at module load time, so we use the default secret
       const username = 'admin'
-      const token = jwt.sign({ username }, 'test-secret', { expiresIn: '7d' })
+      const secret = 'your-secret-key-change-in-production'
+      const token = jwt.sign({ username }, secret, { expiresIn: '7d' })
 
       const result = verifyToken(token)
 
@@ -220,7 +229,6 @@ describe('auth', () => {
     })
 
     it('should return null for invalid token', () => {
-      process.env.JWT_SECRET = 'test-secret'
       const invalidToken = 'invalid.token.here'
 
       const result = verifyToken(invalidToken)
@@ -229,8 +237,8 @@ describe('auth', () => {
     })
 
     it('should return null for expired token', () => {
-      process.env.JWT_SECRET = 'test-secret'
-      const expiredToken = jwt.sign({ username: 'admin' }, 'test-secret', {
+      const secret = 'your-secret-key-change-in-production'
+      const expiredToken = jwt.sign({ username: 'admin' }, secret, {
         expiresIn: '-1h',
       })
 
@@ -240,7 +248,6 @@ describe('auth', () => {
     })
 
     it('should return null for token signed with different secret', () => {
-      process.env.JWT_SECRET = 'test-secret'
       const token = jwt.sign({ username: 'admin' }, 'wrong-secret', { expiresIn: '7d' })
 
       const result = verifyToken(token)

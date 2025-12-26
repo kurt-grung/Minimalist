@@ -1,13 +1,27 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 
-// Mock fs module BEFORE importing
-const mockExistsSync = vi.fn()
-const mockReadFileSync = vi.fn()
-const mockWriteFileSync = vi.fn()
-const mockMkdirSync = vi.fn()
-const mockUnlinkSync = vi.fn()
-const mockStatSync = vi.fn()
-const mockReaddirSync = vi.fn()
+// Use vi.hoisted() to create mocks that can be referenced in vi.mock()
+const {
+  mockExistsSync,
+  mockReadFileSync,
+  mockWriteFileSync,
+  mockMkdirSync,
+  mockUnlinkSync,
+  mockStatSync,
+  mockReaddirSync,
+  mockPathJoin,
+  mockPathDirname,
+} = vi.hoisted(() => ({
+  mockExistsSync: vi.fn(),
+  mockReadFileSync: vi.fn(),
+  mockWriteFileSync: vi.fn(),
+  mockMkdirSync: vi.fn(),
+  mockUnlinkSync: vi.fn(),
+  mockStatSync: vi.fn(),
+  mockReaddirSync: vi.fn(),
+  mockPathJoin: vi.fn(),
+  mockPathDirname: vi.fn(),
+}))
 
 vi.mock('fs', () => ({
   default: {
@@ -27,10 +41,6 @@ vi.mock('fs', () => ({
   statSync: mockStatSync,
   readdirSync: mockReaddirSync,
 }))
-
-// Mock path module
-const mockPathJoin = vi.fn()
-const mockPathDirname = vi.fn()
 
 vi.mock('path', () => ({
   default: {

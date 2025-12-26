@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-// Mock fs module BEFORE importing the module under test
-const mockExistsSync = vi.fn()
-const mockReadFileSync = vi.fn()
-const mockWriteFileSync = vi.fn()
+// Use vi.hoisted() to create mocks that can be referenced in vi.mock()
+const { mockExistsSync, mockReadFileSync, mockWriteFileSync } = vi.hoisted(() => ({
+  mockExistsSync: vi.fn(),
+  mockReadFileSync: vi.fn(),
+  mockWriteFileSync: vi.fn(),
+}))
 
 vi.mock('fs', () => ({
   default: {
@@ -151,16 +153,21 @@ describe('config', () => {
         siteTitle: 'New Blog',
       }
 
+      // updateConfig calls ensureConfig() then getConfig()
+      // getConfig() also calls ensureConfig()
+      // So: ensureConfig (in updateConfig) -> ensureConfig (in getConfig) -> write (in updateConfig)
       mockExistsSync
-        .mockReturnValueOnce(false) // First check in updateConfig
-        .mockReturnValueOnce(false) // Check in ensureConfig
-        .mockReturnValueOnce(true) // After ensure, file exists
+        .mockReturnValueOnce(false) // updateConfig -> ensureConfig check
+        .mockReturnValueOnce(false) // getConfig -> ensureConfig check  
+        .mockReturnValueOnce(true) // getConfig -> readFile check
+        .mockReturnValueOnce(true) // updateConfig -> final write check
       mockWriteFileSync.mockImplementation(() => {})
       mockReadFileSync.mockReturnValue(JSON.stringify(defaultConfig))
 
       const result = updateConfig(update)
 
-      expect(mockWriteFileSync).toHaveBeenCalledTimes(2) // Once in ensureConfig, once in updateConfig
+      // ensureConfig writes twice (once from updateConfig, once from getConfig), updateConfig writes once
+      expect(mockWriteFileSync).toHaveBeenCalledTimes(3)
       expect(result.siteTitle).toBe('New Blog')
     })
 
