@@ -13,8 +13,8 @@
     "install:demo": "cd demo && npm install",
     "dev": "cd demo && npm run dev",
     "dev:demo": "cd demo && npm run dev",
-    "test": "cd cms && npm test",
-    "test:watch": "cd cms && npm run test:watch",
-    "test:coverage": "cd cms && npm run test:coverage"
+    "test": "npm install --workspace=cms && npm test --workspace=cms",
+    "test:watch": "npm install --workspace=cms && npm run test:watch --workspace=cms",
+    "test:coverage": "npm install --workspace=cms && npm run test:coverage --workspace=cms"
   }
 }
