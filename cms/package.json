@@ -17,9 +17,9 @@
   "scripts": {
     "build": "tsc && cp src/cli.js dist/cli.js && chmod +x dist/cli.js",
     "prepublishOnly": "npm run build",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test": "NODE_OPTIONS=--loader ts-node/esm vitest run",
+    "test:watch": "NODE_OPTIONS=--loader ts-node/esm vitest",
+    "test:coverage": "NODE_OPTIONS=--loader ts-node/esm vitest run --coverage"
   },
   "keywords": [
     "cms",
