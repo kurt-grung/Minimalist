@@ -32,6 +32,7 @@ import {
 
 describe('auth', () => {
   const originalEnv = process.env
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -40,10 +41,13 @@ describe('auth', () => {
     mockExistsSync.mockReturnValue(false)
     mockReadFileSync.mockReturnValue('[]')
     mockWriteFileSync.mockImplementation(() => {})
+    // Suppress console.log warnings during tests
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
   })
 
   afterEach(() => {
     process.env = originalEnv
+    consoleLogSpy.mockRestore()
   })
 
   describe('initDefaultUser', () => {
