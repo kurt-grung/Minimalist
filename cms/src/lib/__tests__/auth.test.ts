@@ -1,7 +1,24 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import fs from 'fs'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+
+// Mock fs module BEFORE importing the module under test
+const mockExistsSync = vi.fn()
+const mockReadFileSync = vi.fn()
+const mockWriteFileSync = vi.fn()
+
+vi.mock('fs', () => ({
+  default: {
+    existsSync: mockExistsSync,
+    readFileSync: mockReadFileSync,
+    writeFileSync: mockWriteFileSync,
+  },
+  existsSync: mockExistsSync,
+  readFileSync: mockReadFileSync,
+  writeFileSync: mockWriteFileSync,
+}))
+
+// Now import after mocks are set up
 import {
   initDefaultUser,
   verifyPassword,
@@ -11,19 +28,16 @@ import {
   type User,
 } from '../auth'
 
-// Mock fs module
-vi.mock('fs')
-
-const mockFs = vi.mocked(fs)
-
 describe('auth', () => {
   const originalEnv = process.env
 
   beforeEach(() => {
     vi.clearAllMocks()
     process.env = { ...originalEnv }
-    // Note: USERS_FILE is evaluated at module load time, so we can't easily mock it
-    // The tests work by mocking fs operations directly
+    // Reset all mocks
+    mockExistsSync.mockReturnValue(false)
+    mockReadFileSync.mockReturnValue('[]')
+    mockWriteFileSync.mockImplementation(() => {})
   })
 
   afterEach(() => {
@@ -32,14 +46,14 @@ describe('auth', () => {
 
   describe('initDefaultUser', () => {
     it('should create default user file if it does not exist', () => {
-      mockFs.existsSync.mockReturnValue(false)
-      mockFs.writeFileSync.mockImplementation(() => {})
+      mockExistsSync.mockReturnValue(false)
+      mockWriteFileSync.mockImplementation(() => {})
 
       initDefaultUser()
 
-      expect(mockFs.existsSync).toHaveBeenCalled()
-      expect(mockFs.writeFileSync).toHaveBeenCalled()
-      const writeCall = mockFs.writeFileSync.mock.calls[0]
+      expect(mockExistsSync).toHaveBeenCalled()
+      expect(mockWriteFileSync).toHaveBeenCalled()
+      const writeCall = mockWriteFileSync.mock.calls[0]
       const users = JSON.parse(writeCall[1] as string) as User[]
       expect(users).toHaveLength(1)
       expect(users[0].username).toBe('admin')
@@ -48,29 +62,29 @@ describe('auth', () => {
 
     it('should use custom password from environment variable', () => {
       process.env.ADMIN_PASSWORD = 'custom123'
-      mockFs.existsSync.mockReturnValue(false)
-      mockFs.writeFileSync.mockImplementation(() => {})
+      mockExistsSync.mockReturnValue(false)
+      mockWriteFileSync.mockImplementation(() => {})
 
       initDefaultUser()
 
-      expect(mockFs.writeFileSync).toHaveBeenCalled()
-      const writeCall = mockFs.writeFileSync.mock.calls[0]
+      expect(mockWriteFileSync).toHaveBeenCalled()
+      const writeCall = mockWriteFileSync.mock.calls[0]
       const users = JSON.parse(writeCall[1] as string) as User[]
       const isValid = bcrypt.compareSync('custom123', users[0].passwordHash)
       expect(isValid).toBe(true)
     })
 
     it('should not create file if it already exists', () => {
-      mockFs.existsSync.mockReturnValue(true)
+      mockExistsSync.mockReturnValue(true)
 
       initDefaultUser()
 
-      expect(mockFs.writeFileSync).not.toHaveBeenCalled()
+      expect(mockWriteFileSync).not.toHaveBeenCalled()
     })
 
     it('should handle errors gracefully', () => {
-      mockFs.existsSync.mockReturnValue(false)
-      mockFs.writeFileSync.mockImplementation(() => {
+      mockExistsSync.mockReturnValue(false)
+      mockWriteFileSync.mockImplementation(() => {
         throw new Error('Permission denied')
       })
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -109,14 +123,14 @@ describe('auth', () => {
         username: 'admin',
         passwordHash: bcrypt.hashSync('admin123', 10),
       }
-      mockFs.existsSync.mockReturnValue(true)
-      mockFs.readFileSync.mockReturnValue(JSON.stringify([mockUser]))
+      mockExistsSync.mockReturnValue(true)
+      mockReadFileSync.mockReturnValue(JSON.stringify([mockUser]))
 
       const result = getUser('admin')
 
       expect(result).toEqual(mockUser)
-      expect(mockFs.readFileSync).toHaveBeenCalled()
-      const readCall = mockFs.readFileSync.mock.calls[0]
+      expect(mockReadFileSync).toHaveBeenCalled()
+      const readCall = mockReadFileSync.mock.calls[0]
       expect(readCall[1]).toBe('utf-8')
     })
 
@@ -125,8 +139,8 @@ describe('auth', () => {
         username: 'admin',
         passwordHash: bcrypt.hashSync('admin123', 10),
       }
-      mockFs.existsSync.mockReturnValue(true)
-      mockFs.readFileSync.mockReturnValue(JSON.stringify([mockUser]))
+      mockExistsSync.mockReturnValue(true)
+      mockReadFileSync.mockReturnValue(JSON.stringify([mockUser]))
 
       const result = getUser('nonexistent')
 
@@ -134,26 +148,26 @@ describe('auth', () => {
     })
 
     it('should initialize default user if file does not exist', () => {
-      mockFs.existsSync
+      mockExistsSync
         .mockReturnValueOnce(false) // First check in getUser
         .mockReturnValueOnce(false) // Check in initDefaultUser
         .mockReturnValueOnce(true) // After init, file exists
-      mockFs.writeFileSync.mockImplementation(() => {})
+      mockWriteFileSync.mockImplementation(() => {})
       const mockUser: User = {
         username: 'admin',
         passwordHash: bcrypt.hashSync('admin123', 10),
       }
-      mockFs.readFileSync.mockReturnValue(JSON.stringify([mockUser]))
+      mockReadFileSync.mockReturnValue(JSON.stringify([mockUser]))
 
       const result = getUser('admin')
 
-      expect(mockFs.writeFileSync).toHaveBeenCalled()
+      expect(mockWriteFileSync).toHaveBeenCalled()
       expect(result).toEqual(mockUser)
     })
 
     it('should return null if file cannot be read', () => {
-      mockFs.existsSync.mockReturnValue(true)
-      mockFs.readFileSync.mockImplementation(() => {
+      mockExistsSync.mockReturnValue(true)
+      mockReadFileSync.mockImplementation(() => {
         throw new Error('Permission denied')
       })
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})

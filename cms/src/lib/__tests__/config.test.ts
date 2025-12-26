@@ -1,16 +1,28 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import fs from 'fs'
+
+// Mock fs module BEFORE importing the module under test
+const mockExistsSync = vi.fn()
+const mockReadFileSync = vi.fn()
+const mockWriteFileSync = vi.fn()
+
+vi.mock('fs', () => ({
+  default: {
+    existsSync: mockExistsSync,
+    readFileSync: mockReadFileSync,
+    writeFileSync: mockWriteFileSync,
+  },
+  existsSync: mockExistsSync,
+  readFileSync: mockReadFileSync,
+  writeFileSync: mockWriteFileSync,
+}))
+
+// Now import after mocks are set up
 import {
   ensureConfig,
   getConfig,
   updateConfig,
   type SiteConfig,
 } from '../config'
-
-// Mock fs module
-vi.mock('fs')
-
-const mockFs = vi.mocked(fs)
 
 describe('config', () => {
   const defaultConfig: SiteConfig = {
@@ -22,37 +34,39 @@ describe('config', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    // Note: CONFIG_FILE is evaluated at module load time
-    // The tests work by mocking fs operations directly
+    // Reset all mocks
+    mockExistsSync.mockReturnValue(false)
+    mockReadFileSync.mockReturnValue(JSON.stringify(defaultConfig))
+    mockWriteFileSync.mockImplementation(() => {})
   })
 
   describe('ensureConfig', () => {
     it('should create config file if it does not exist', () => {
-      mockFs.existsSync.mockReturnValue(false)
-      mockFs.writeFileSync.mockImplementation(() => {})
+      mockExistsSync.mockReturnValue(false)
+      mockWriteFileSync.mockImplementation(() => {})
 
       ensureConfig()
 
-      expect(mockFs.existsSync).toHaveBeenCalled()
-      expect(mockFs.writeFileSync).toHaveBeenCalled()
-      const writeCall = mockFs.writeFileSync.mock.calls[0]
+      expect(mockExistsSync).toHaveBeenCalled()
+      expect(mockWriteFileSync).toHaveBeenCalled()
+      const writeCall = mockWriteFileSync.mock.calls[0]
       expect(JSON.parse(writeCall[1] as string)).toEqual(defaultConfig)
       expect(writeCall[2]).toBe('utf-8')
     })
 
     it('should not create config file if it already exists', () => {
-      mockFs.existsSync.mockReturnValue(true)
+      mockExistsSync.mockReturnValue(true)
 
       ensureConfig()
 
-      expect(mockFs.writeFileSync).not.toHaveBeenCalled()
+      expect(mockWriteFileSync).not.toHaveBeenCalled()
     })
   })
 
   describe('getConfig', () => {
     it('should return default config if file does not exist', () => {
-      mockFs.existsSync.mockReturnValue(false)
-      mockFs.writeFileSync.mockImplementation(() => {})
+      mockExistsSync.mockReturnValue(false)
+      mockWriteFileSync.mockImplementation(() => {})
 
       const result = getConfig()
 
@@ -66,20 +80,20 @@ describe('config', () => {
         postRoute: 'articles',
         pageRoute: 'pages',
       }
-      mockFs.existsSync.mockReturnValue(true)
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(customConfig))
+      mockExistsSync.mockReturnValue(true)
+      mockReadFileSync.mockReturnValue(JSON.stringify(customConfig))
 
       const result = getConfig()
 
       expect(result).toEqual(customConfig)
-      expect(mockFs.readFileSync).toHaveBeenCalled()
-      const readCall = mockFs.readFileSync.mock.calls[0]
+      expect(mockReadFileSync).toHaveBeenCalled()
+      const readCall = mockReadFileSync.mock.calls[0]
       expect(readCall[1]).toBe('utf-8')
     })
 
     it('should return default config if file read fails', () => {
-      mockFs.existsSync.mockReturnValue(true)
-      mockFs.readFileSync.mockImplementation(() => {
+      mockExistsSync.mockReturnValue(true)
+      mockReadFileSync.mockImplementation(() => {
         throw new Error('Permission denied')
       })
 
@@ -89,8 +103,8 @@ describe('config', () => {
     })
 
     it('should return default config if JSON is invalid', () => {
-      mockFs.existsSync.mockReturnValue(true)
-      mockFs.readFileSync.mockReturnValue('invalid json')
+      mockExistsSync.mockReturnValue(true)
+      mockReadFileSync.mockReturnValue('invalid json')
 
       const result = getConfig()
 
@@ -117,17 +131,17 @@ describe('config', () => {
         pageRoute: '',
       }
 
-      mockFs.existsSync.mockReturnValue(true)
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(existingConfig))
-      mockFs.writeFileSync.mockImplementation(() => {})
+      mockExistsSync.mockReturnValue(true)
+      mockReadFileSync.mockReturnValue(JSON.stringify(existingConfig))
+      mockWriteFileSync.mockImplementation(() => {})
 
       const result = updateConfig(update)
 
       expect(result.siteTitle).toBe('Updated Blog')
       expect(result.postRoute).toBe('articles')
       expect(result.siteSubtitle).toBe('Existing subtitle')
-      expect(mockFs.writeFileSync).toHaveBeenCalled()
-      const writeCall = mockFs.writeFileSync.mock.calls[0]
+      expect(mockWriteFileSync).toHaveBeenCalled()
+      const writeCall = mockWriteFileSync.mock.calls[0]
       expect(JSON.parse(writeCall[1] as string)).toEqual(result)
       expect(writeCall[2]).toBe('utf-8')
     })
@@ -137,16 +151,16 @@ describe('config', () => {
         siteTitle: 'New Blog',
       }
 
-      mockFs.existsSync
+      mockExistsSync
         .mockReturnValueOnce(false) // First check in updateConfig
         .mockReturnValueOnce(false) // Check in ensureConfig
         .mockReturnValueOnce(true) // After ensure, file exists
-      mockFs.writeFileSync.mockImplementation(() => {})
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(defaultConfig))
+      mockWriteFileSync.mockImplementation(() => {})
+      mockReadFileSync.mockReturnValue(JSON.stringify(defaultConfig))
 
       const result = updateConfig(update)
 
-      expect(mockFs.writeFileSync).toHaveBeenCalledTimes(2) // Once in ensureConfig, once in updateConfig
+      expect(mockWriteFileSync).toHaveBeenCalledTimes(2) // Once in ensureConfig, once in updateConfig
       expect(result.siteTitle).toBe('New Blog')
     })
 
@@ -161,9 +175,9 @@ describe('config', () => {
         siteSubtitle: 'Updated subtitle',
       }
 
-      mockFs.existsSync.mockReturnValue(true)
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(existingConfig))
-      mockFs.writeFileSync.mockImplementation(() => {})
+      mockExistsSync.mockReturnValue(true)
+      mockReadFileSync.mockReturnValue(JSON.stringify(existingConfig))
+      mockWriteFileSync.mockImplementation(() => {})
 
       const result = updateConfig(update)
 
