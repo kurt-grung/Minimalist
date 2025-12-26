@@ -32,15 +32,19 @@ vi.mock('@vercel/kv', () => ({
 
 describe('storage', () => {
   const originalEnv = process.env
-  const originalCwd = process.cwd()
 
   beforeEach(() => {
     vi.clearAllMocks()
     process.env = { ...originalEnv }
-    // Mock path.join to work with actual process.cwd()
+    // Mock path.join and path.dirname to work with actual process.cwd()
     mockPath.join.mockImplementation((...args) => {
       if (args.length === 0) return ''
       return args.join('/').replace(/\/+/g, '/')
+    })
+    mockPath.dirname.mockImplementation((filePath: string) => {
+      const parts = filePath.split('/')
+      parts.pop()
+      return parts.join('/') || '/'
     })
     // Reset to development mode by default
     process.env.NODE_ENV = 'development'

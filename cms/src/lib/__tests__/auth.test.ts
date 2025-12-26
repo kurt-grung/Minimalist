@@ -17,9 +17,7 @@ vi.mock('fs')
 const mockFs = vi.mocked(fs)
 
 describe('auth', () => {
-  const mockUsersFile = '/test/users.json'
   const originalEnv = process.env
-  const originalCwd = process.cwd
 
   beforeEach(() => {
     vi.clearAllMocks()
