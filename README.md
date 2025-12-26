@@ -59,7 +59,3 @@ npx headless-cms init
 - [Demo README](./demo/README.md) - Demo project guide
 - [Installation Guide](./demo/INSTALLATION.md) - Setup instructions
 - [Roadmap](./demo/roadmap.md) - Planned features
-
-## License
-
-MIT
