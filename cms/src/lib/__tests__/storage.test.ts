@@ -75,7 +75,6 @@ describe('storage', () => {
       if (args.length === 0) return ''
       return args.join('/').replace(/\/+/g, '/')
     })
-    })
     mockPathDirname.mockImplementation((filePath: string) => {
       const parts = filePath.split('/')
       parts.pop()
