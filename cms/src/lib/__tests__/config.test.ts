@@ -1,6 +1,5 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import fs from 'fs'
-import path from 'path'
 import {
   ensureConfig,
   getConfig,
@@ -10,10 +9,8 @@ import {
 
 // Mock fs module
 vi.mock('fs')
-vi.mock('path')
 
 const mockFs = vi.mocked(fs)
-const mockPath = vi.mocked(path)
 
 describe('config', () => {
   const defaultConfig: SiteConfig = {
@@ -27,7 +24,6 @@ describe('config', () => {
     vi.clearAllMocks()
     // Note: CONFIG_FILE is evaluated at module load time
     // The tests work by mocking fs operations directly
-    mockPath.join.mockImplementation((...args) => args.join('/'))
   })
 
   describe('ensureConfig', () => {

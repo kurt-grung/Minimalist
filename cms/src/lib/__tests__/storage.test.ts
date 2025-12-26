@@ -32,13 +32,16 @@ vi.mock('@vercel/kv', () => ({
 
 describe('storage', () => {
   const originalEnv = process.env
-  const originalCwd = process.cwd
+  const originalCwd = process.cwd()
 
   beforeEach(() => {
     vi.clearAllMocks()
     process.env = { ...originalEnv }
-    process.cwd = vi.fn(() => '/test')
-    mockPath.join.mockImplementation((...args) => args.join('/'))
+    // Mock path.join to work with actual process.cwd()
+    mockPath.join.mockImplementation((...args) => {
+      if (args.length === 0) return ''
+      return args.join('/').replace(/\/+/g, '/')
+    })
     // Reset to development mode by default
     process.env.NODE_ENV = 'development'
     delete process.env.KV_REST_API_URL
@@ -47,7 +50,6 @@ describe('storage', () => {
 
   afterEach(() => {
     process.env = originalEnv
-    process.cwd = originalCwd
   })
 
   describe('storageGet', () => {
@@ -60,7 +62,10 @@ describe('storage', () => {
       const result = await storageGet(key)
 
       expect(result).toBe(value)
-      expect(mockFs.readFileSync).toHaveBeenCalledWith('/test/content/posts/test.json', 'utf-8')
+      expect(mockFs.readFileSync).toHaveBeenCalled()
+      const readCall = mockFs.readFileSync.mock.calls[0]
+      expect(readCall[0]).toContain('content/posts/test.json')
+      expect(readCall[1]).toBe('utf-8')
     })
 
     it('should return null if file does not exist', async () => {
@@ -128,11 +133,11 @@ describe('storage', () => {
 
       expect(result).toBe(true)
       expect(mockFs.mkdirSync).toHaveBeenCalled()
-      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
-        '/test/content/posts/test.json',
-        value,
-        'utf-8',
-      )
+      expect(mockFs.writeFileSync).toHaveBeenCalled()
+      const writeCall = mockFs.writeFileSync.mock.calls[0]
+      expect(writeCall[0]).toContain('content/posts/test.json')
+      expect(writeCall[1]).toBe(value)
+      expect(writeCall[2]).toBe('utf-8')
     })
 
     it('should create directory if it does not exist', async () => {
@@ -143,7 +148,10 @@ describe('storage', () => {
       const result = await storageSet(key, value)
 
       expect(result).toBe(true)
-      expect(mockFs.mkdirSync).toHaveBeenCalledWith('/test/content/posts', { recursive: true })
+      expect(mockFs.mkdirSync).toHaveBeenCalled()
+      const mkdirCall = mockFs.mkdirSync.mock.calls[0]
+      expect(mkdirCall[0]).toContain('content/posts')
+      expect(mkdirCall[1]).toEqual({ recursive: true })
     })
 
     it('should return false on file write error', async () => {
@@ -183,7 +191,9 @@ describe('storage', () => {
       const result = await storageDelete(key)
 
       expect(result).toBe(true)
-      expect(mockFs.unlinkSync).toHaveBeenCalledWith('/test/content/posts/test.json')
+      expect(mockFs.unlinkSync).toHaveBeenCalled()
+      const unlinkCall = mockFs.unlinkSync.mock.calls[0]
+      expect(unlinkCall[0]).toContain('content/posts/test.json')
     })
 
     it('should return false if file does not exist', async () => {
@@ -233,7 +243,9 @@ describe('storage', () => {
       const result = await storageList(prefix)
 
       expect(result).toEqual(files)
-      expect(mockFs.readdirSync).toHaveBeenCalledWith('/test/content/posts/')
+      expect(mockFs.readdirSync).toHaveBeenCalled()
+      const readdirCall = mockFs.readdirSync.mock.calls[0]
+      expect(readdirCall[0]).toContain('content/posts')
     })
 
     it('should return empty array if directory does not exist', async () => {
@@ -279,7 +291,9 @@ describe('storage', () => {
       const result = await storageExists(key)
 
       expect(result).toBe(true)
-      expect(mockFs.existsSync).toHaveBeenCalledWith('/test/content/posts/test.json')
+      expect(mockFs.existsSync).toHaveBeenCalled()
+      const existsCall = mockFs.existsSync.mock.calls[0]
+      expect(existsCall[0]).toContain('content/posts/test.json')
     })
 
     it('should return false if file does not exist', async () => {

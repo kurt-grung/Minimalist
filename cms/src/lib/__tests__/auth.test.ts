@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import fs from 'fs'
-import path from 'path'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import {
@@ -14,10 +13,8 @@ import {
 
 // Mock fs module
 vi.mock('fs')
-vi.mock('path')
 
 const mockFs = vi.mocked(fs)
-const mockPath = vi.mocked(path)
 
 describe('auth', () => {
   const mockUsersFile = '/test/users.json'
@@ -29,7 +26,6 @@ describe('auth', () => {
     process.env = { ...originalEnv }
     // Note: USERS_FILE is evaluated at module load time, so we can't easily mock it
     // The tests work by mocking fs operations directly
-    mockPath.join.mockImplementation((...args) => args.join('/'))
   })
 
   afterEach(() => {
