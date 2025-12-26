@@ -26,17 +26,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-          cache: 'npm'
       
       - name: Build CMS package
         working-directory: ./cms
         run: |
-          npm ci
+          npm install
           npm run build
       
       - name: Install demo dependencies
         working-directory: ./demo
-        run: npm ci
+        run: npm install
       
       - name: Build demo project
         working-directory: ./demo
