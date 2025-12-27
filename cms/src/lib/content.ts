@@ -32,7 +32,7 @@ export async function getAllPosts(locale?: string): Promise<Post[]> {
       for (const key of keys) {
         if (key.endsWith('.json') || key.endsWith('.md')) {
           const slug = key.replace(/\.(json|md)$/, '')
-          // Avoid duplicates (prefer markdown over json if both exist)
+          // Avoid duplicates (prefer JSON over markdown if both exist)
           if (seenSlugs.has(slug)) continue
           seenSlugs.add(slug)
           
@@ -48,6 +48,7 @@ export async function getAllPosts(locale?: string): Promise<Post[]> {
       for (const key of keys) {
         if ((key.endsWith('.json') || key.endsWith('.md')) && !key.includes('/')) {
           // Legacy format: content/posts/slug.json or slug.md
+          // Process JSON files first, then markdown (prefer JSON)
           const slug = key.replace(/\.(json|md)$/, '')
           if (seenSlugs.has(slug)) continue
           seenSlugs.add(slug)
@@ -74,22 +75,24 @@ export async function getPostBySlug(slug: string, locale?: string): Promise<Post
     let isMarkdown = false
     
     if (locale) {
-      // Try markdown first, then JSON (prefer markdown)
-      content = await storageGet(`content/posts/${locale}/${slug}.md`)
-      if (content) {
-        isMarkdown = true
-      } else {
-        content = await storageGet(`content/posts/${locale}/${slug}.json`)
+      // Try JSON first (default format), then markdown
+      content = await storageGet(`content/posts/${locale}/${slug}.json`)
+      if (!content) {
+        content = await storageGet(`content/posts/${locale}/${slug}.md`)
+        if (content) {
+          isMarkdown = true
+        }
       }
     }
     
     // Fallback to legacy format if locale-specific not found
     if (!content) {
-      content = await storageGet(`content/posts/${slug}.md`)
-      if (content) {
-        isMarkdown = true
-      } else {
-        content = await storageGet(`content/posts/${slug}.json`)
+      content = await storageGet(`content/posts/${slug}.json`)
+      if (!content) {
+        content = await storageGet(`content/posts/${slug}.md`)
+        if (content) {
+          isMarkdown = true
+        }
       }
     }
     
@@ -163,13 +166,13 @@ export async function deletePost(slug: string, locale?: string): Promise<boolean
     let deleted = false
     
     if (locale) {
-      // Try both formats
-      deleted = await storageDelete(`content/posts/${locale}/${slug}.md`) || 
-                await storageDelete(`content/posts/${locale}/${slug}.json`)
+      // Try both formats (order doesn't matter for deletion)
+      deleted = await storageDelete(`content/posts/${locale}/${slug}.json`) || 
+                await storageDelete(`content/posts/${locale}/${slug}.md`)
     } else {
       // Try legacy format (both formats)
-      deleted = await storageDelete(`content/posts/${slug}.md`) || 
-                await storageDelete(`content/posts/${slug}.json`)
+      deleted = await storageDelete(`content/posts/${slug}.json`) || 
+                await storageDelete(`content/posts/${slug}.md`)
     }
     
     return deleted
