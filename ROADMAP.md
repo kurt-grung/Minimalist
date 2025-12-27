@@ -32,15 +32,15 @@ This document outlines the planned features, improvements, and enhancements for 
 
 **Status:** ✅ Complete - Built with zero external dependencies
 
-#### 1.2 Markdown Support ✅ PARTIALLY COMPLETE
+#### 1.2 Markdown Support ✅ COMPLETE
 - [x] Markdown parsing and rendering in editor
 - [x] Markdown mode toggle in editor
 - [x] HTML to Markdown conversion
 - [x] Markdown to HTML conversion
-- [ ] Support for frontmatter in markdown files
-- [ ] Migration tool: JSON → Markdown
+- [x] Support for frontmatter in markdown files
+- [x] Migration tool: JSON → Markdown
 
-**Status:** ✅ Core markdown support complete - Editor supports markdown mode with bidirectional conversion
+**Status:** ✅ Complete - Full markdown support with frontmatter and migration tool
 
 #### 1.3 Image Management
 - [ ] Image upload functionality

@@ -11,11 +11,17 @@ async function init() {
 
   if (command === 'init') {
     await initProject()
+  } else if (command === 'migrate') {
+    await migrateToMarkdown()
   } else {
     console.log(`
-Usage: minimalist init
+Usage: 
+  minimalist init          Set up the minimalist CMS in your Next.js project
+  minimalist migrate       Convert JSON posts to Markdown format with frontmatter
 
-This will set up the minimalist CMS in your Next.js project.
+Examples:
+  minimalist init
+  minimalist migrate
 `)
   }
 }
@@ -340,6 +346,215 @@ async function initProject() {
   console.log('   ✅ Settings management')
   console.log('   ✅ File-based content storage')
   console.log('   ✅ Ready for production deployment')
+}
+
+async function migrateToMarkdown() {
+  const cwd = process.cwd()
+  
+  console.log('🔄 Migrating JSON posts to Markdown format...\n')
+  
+  const contentDir = path.join(cwd, 'content')
+  if (!fs.existsSync(contentDir)) {
+    console.error('❌ Error: content/ directory not found.')
+    console.error('   Make sure you run this command in your Next.js project root.')
+    process.exit(1)
+  }
+  
+  const postsDir = path.join(contentDir, 'posts')
+  if (!fs.existsSync(postsDir)) {
+    console.error('❌ Error: content/posts/ directory not found.')
+    process.exit(1)
+  }
+  
+  // Simple frontmatter generator
+  const generateFrontmatter = (post: any): string => {
+    const frontmatter: Record<string, string> = {
+      id: post.id,
+      title: post.title,
+      slug: post.slug,
+      date: post.date,
+    }
+    
+    if (post.excerpt) {
+      frontmatter.excerpt = post.excerpt
+    }
+    
+    if (post.author) {
+      frontmatter.author = post.author
+    }
+    
+    const lines = Object.entries(frontmatter).map(([key, value]) => {
+      const escapedValue = String(value).replace(/"/g, '\\"')
+      return `${key}: "${escapedValue}"`
+    })
+    
+    return `---\n${lines.join('\n')}\n---\n\n`
+  }
+  
+  // Process posts directory (handle locale subdirectories)
+  const processDirectory = async (dir: string, relativePath: string = '') => {
+    const entries = fs.readdirSync(dir, { withFileTypes: true })
+    let migratedCount = 0
+    let skippedCount = 0
+    let errorCount = 0
+    
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name)
+      
+      if (entry.isDirectory()) {
+        // Recursively process subdirectories (locales)
+        const subResults = await processDirectory(fullPath, path.join(relativePath, entry.name))
+        migratedCount += subResults.migrated
+        skippedCount += subResults.skipped
+        errorCount += subResults.errors
+      } else if (entry.isFile() && entry.name.endsWith('.json')) {
+        try {
+          const jsonContent = fs.readFileSync(fullPath, 'utf-8')
+          const post = JSON.parse(jsonContent)
+          
+          // Check if markdown version already exists
+          const mdPath = fullPath.replace('.json', '.md')
+          if (fs.existsSync(mdPath)) {
+            console.log(`⏭️  Skipping ${path.join(relativePath, entry.name)} (markdown already exists)`)
+            skippedCount++
+            continue
+          }
+          
+          // Convert HTML content to markdown
+          // Note: This is a simplified converter using regex
+          // For better results, consider using a library like turndown
+          let markdownContent = post.content || ''
+          
+          // Basic HTML to markdown conversion using regex
+          if (markdownContent.includes('<')) {
+            // Handle code blocks first (before other processing)
+            markdownContent = markdownContent.replace(
+              /<pre><code[^>]*class="language-(\w+)"[^>]*>(.*?)<\/code><\/pre>/gis,
+              (match, lang, code) => {
+                return `\`\`\`${lang}\n${code.trim()}\n\`\`\`\n\n`
+              }
+            )
+            
+            // Handle headings
+            markdownContent = markdownContent
+              .replace(/<h1[^>]*>(.*?)<\/h1>/gis, '# $1\n\n')
+              .replace(/<h2[^>]*>(.*?)<\/h2>/gis, '## $1\n\n')
+              .replace(/<h3[^>]*>(.*?)<\/h3>/gis, '### $1\n\n')
+              .replace(/<h4[^>]*>(.*?)<\/h4>/gis, '#### $1\n\n')
+              .replace(/<h5[^>]*>(.*?)<\/h5>/gis, '##### $1\n\n')
+              .replace(/<h6[^>]*>(.*?)<\/h6>/gis, '###### $1\n\n')
+            
+            // Handle blockquotes
+            markdownContent = markdownContent.replace(
+              /<blockquote[^>]*>(.*?)<\/blockquote>/gis,
+              (match, content) => {
+                const lines = content.split('\n').filter((l: string) => l.trim())
+                return lines.map((line: string) => `> ${line.trim()}`).join('\n') + '\n\n'
+              }
+            )
+            
+            // Handle lists
+            markdownContent = markdownContent.replace(
+              /<ul[^>]*>(.*?)<\/ul>/gis,
+              (match, content) => {
+                const items = content.match(/<li[^>]*>(.*?)<\/li>/gis) || []
+                return items.map((item: string) => {
+                  const text = item.replace(/<li[^>]*>(.*?)<\/li>/gis, '$1').trim()
+                  return `- ${text}`
+                }).join('\n') + '\n\n'
+              }
+            )
+            
+            markdownContent = markdownContent.replace(
+              /<ol[^>]*>(.*?)<\/ol>/gis,
+              (match, content) => {
+                const items = content.match(/<li[^>]*>(.*?)<\/li>/gis) || []
+                return items.map((item: string, i: number) => {
+                  const text = item.replace(/<li[^>]*>(.*?)<\/li>/gis, '$1').trim()
+                  return `${i + 1}. ${text}`
+                }).join('\n') + '\n\n'
+              }
+            )
+            
+            // Handle paragraphs
+            markdownContent = markdownContent.replace(/<p[^>]*>(.*?)<\/p>/gis, '$1\n\n')
+            
+            // Handle inline formatting
+            markdownContent = markdownContent
+              .replace(/<strong[^>]*>(.*?)<\/strong>/gis, '**$1**')
+              .replace(/<b[^>]*>(.*?)<\/b>/gis, '**$1**')
+              .replace(/<em[^>]*>(.*?)<\/em>/gis, '*$1*')
+              .replace(/<i[^>]*>(.*?)<\/i>/gis, '*$1*')
+            
+            // Handle inline code (but not code blocks)
+            markdownContent = markdownContent.replace(
+              /<code[^>]*>(.*?)<\/code>/gis,
+              (match, code) => {
+                // Skip if it's inside a pre tag (already handled)
+                return `\`${code}\``
+              }
+            )
+            
+            // Handle links
+            markdownContent = markdownContent.replace(
+              /<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gis,
+              '[$2]($1)'
+            )
+            
+            // Handle line breaks
+            markdownContent = markdownContent.replace(/<br\s*\/?>/gi, '\n')
+            
+            // Remove remaining HTML tags
+            markdownContent = markdownContent.replace(/<[^>]+>/g, '')
+            
+            // Decode HTML entities
+            markdownContent = markdownContent
+              .replace(/&nbsp;/g, ' ')
+              .replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+              .replace(/&apos;/g, "'")
+            
+            // Clean up excessive newlines
+            markdownContent = markdownContent.replace(/\n{3,}/g, '\n\n').trim()
+          }
+          
+          // Generate markdown file with frontmatter
+          const frontmatter = generateFrontmatter(post)
+          const markdownFile = frontmatter + markdownContent
+          
+          // Write markdown file
+          fs.writeFileSync(mdPath, markdownFile, 'utf-8')
+          
+          console.log(`✅ Migrated ${path.join(relativePath, entry.name)} → ${path.join(relativePath, entry.name.replace('.json', '.md'))}`)
+          migratedCount++
+        } catch (error) {
+          console.error(`❌ Error migrating ${path.join(relativePath, entry.name)}:`, error)
+          errorCount++
+        }
+      }
+    }
+    
+    return { migrated: migratedCount, skipped: skippedCount, errors: errorCount }
+  }
+  
+  const results = await processDirectory(postsDir)
+  
+  console.log('\n✨ Migration complete!')
+  console.log(`   ✅ Migrated: ${results.migrated} post(s)`)
+  if (results.skipped > 0) {
+    console.log(`   ⏭️  Skipped: ${results.skipped} post(s) (markdown already exists)`)
+  }
+  if (results.errors > 0) {
+    console.log(`   ❌ Errors: ${results.errors} post(s)`)
+  }
+  
+  if (results.migrated > 0) {
+    console.log('\n💡 Note: JSON files have been kept for backup.')
+    console.log('   You can delete them after verifying the markdown files are correct.')
+  }
 }
 
 export { init }

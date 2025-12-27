@@ -3,4 +3,5 @@ export * from './lib/storage'
 export * from './lib/auth'
 export * from './lib/content'
 export * from './lib/config'
+export * from './lib/frontmatter'
 
