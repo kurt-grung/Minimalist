@@ -6,11 +6,30 @@ import Link from 'next/link'
 import RichTextEditor from '@/components/RichTextEditor'
 import ConfirmModal from '@/components/ConfirmModal'
 
+// Force dynamic rendering - this page uses browser-only APIs
+export const dynamic = 'force-dynamic'
+
+interface Locale {
+  code: string
+  name: string
+  enabled: boolean
+}
+
 interface SiteConfig {
   siteTitle: string
   siteSubtitle: string
   postRoute: string
   pageRoute: string
+  defaultLocale: string
+  locales: Locale[]
+}
+
+interface LocaleFormState {
+  title: string
+  slug: string
+  content: string
+  excerpt: string
+  author: string
 }
 
 export default function NewPostPage() {
@@ -19,10 +38,12 @@ export default function NewPostPage() {
   const [content, setContent] = useState('')
   const [excerpt, setExcerpt] = useState('')
   const [author, setAuthor] = useState('')
+  const [locale, setLocale] = useState<string>('')
+  const [localeStates, setLocaleStates] = useState<Record<string, LocaleFormState>>({})
   const [saving, setSaving] = useState(false)
   const [isLocalhost, setIsLocalhost] = useState(false)
   const [errorModal, setErrorModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' })
-  const [config, setConfig] = useState<SiteConfig>({ siteTitle: 'My Blog', siteSubtitle: 'Welcome to our simple file-based CMS', postRoute: 'posts', pageRoute: '' })
+  const [config, setConfig] = useState<SiteConfig>({ siteTitle: 'My Blog', siteSubtitle: 'Welcome to our simple file-based CMS', postRoute: 'posts', pageRoute: '', defaultLocale: 'en', locales: [] })
   const router = useRouter()
 
   useEffect(() => {
@@ -43,6 +64,30 @@ export default function NewPostPage() {
     loadSettings()
   }, [])
 
+  // Initialize locale when config loads
+  useEffect(() => {
+    if (config.defaultLocale && !locale) {
+      setLocale(config.defaultLocale)
+    }
+  }, [config.defaultLocale, locale])
+
+  // Save current form state to localeStates as user types
+  useEffect(() => {
+    const currentLocale = locale || config.defaultLocale
+    if (currentLocale) {
+      setLocaleStates(prev => ({
+        ...prev,
+        [currentLocale]: {
+          title,
+          slug,
+          content,
+          excerpt,
+          author
+        }
+      }))
+    }
+  }, [title, slug, content, excerpt, author, locale, config.defaultLocale])
+
   const checkAuth = async () => {
     const token = localStorage.getItem('admin_token')
     if (!token) {
@@ -57,6 +102,10 @@ export default function NewPostPage() {
       if (response.ok) {
         const data = await response.json()
         setConfig(data)
+        // Set default locale if not already set
+        if (!locale && data.defaultLocale) {
+          setLocale(data.defaultLocale)
+        }
       }
     } catch (err) {
       console.error('Failed to load settings:', err)
@@ -111,7 +160,8 @@ export default function NewPostPage() {
             content,
             excerpt,
             author,
-            date: new Date().toISOString()
+            date: new Date().toISOString(),
+            locale: locale || config.defaultLocale
           })
         })
       }
@@ -161,6 +211,41 @@ export default function NewPostPage() {
     return text
   }
 
+  // Save current form state to localeStates before switching
+  const saveCurrentLocaleState = (currentLocale: string) => {
+    if (currentLocale) {
+      setLocaleStates(prev => ({
+        ...prev,
+        [currentLocale]: {
+          title,
+          slug,
+          content,
+          excerpt,
+          author
+        }
+      }))
+    }
+  }
+
+  // Restore form state for a locale
+  const restoreLocaleState = (targetLocale: string) => {
+    const savedState = localeStates[targetLocale]
+    if (savedState) {
+      setTitle(savedState.title)
+      setSlug(savedState.slug)
+      setContent(savedState.content)
+      setExcerpt(savedState.excerpt)
+      setAuthor(savedState.author)
+    } else {
+      // No saved state, clear everything
+      setTitle('')
+      setSlug('')
+      setContent('')
+      setExcerpt('')
+      setAuthor('')
+    }
+  }
+
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTitle = e.target.value
     setTitle(newTitle)
@@ -200,7 +285,8 @@ export default function NewPostPage() {
           content,
           excerpt,
           author,
-          date: new Date().toISOString()
+          date: new Date().toISOString(),
+          locale: locale || config.defaultLocale
         })
       })
 
@@ -292,6 +378,48 @@ export default function NewPostPage() {
             URL will be: <span style={{ fontFamily: 'monospace', color: '#0070f3' }}>
               {postRoute ? `/${postRoute}/${slug || 'your-slug'}` : `/${slug || 'your-slug'}`}
             </span>
+          </p>
+        </div>
+
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+            Locale *
+          </label>
+          <select
+            value={locale || config.defaultLocale}
+            onChange={(e) => {
+              const newLocale = e.target.value
+              const currentLocale = locale || config.defaultLocale
+              
+              // Save current form state before switching
+              if (currentLocale) {
+                saveCurrentLocaleState(currentLocale)
+              }
+              
+              // Switch to new locale
+              setLocale(newLocale)
+              
+              // Restore form state for the new locale (or clear if no saved state)
+              restoreLocaleState(newLocale)
+            }}
+            required
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              fontSize: '1rem',
+              backgroundColor: 'white'
+            }}
+          >
+            {config.locales?.filter(l => l.enabled).map((loc) => (
+              <option key={loc.code} value={loc.code}>
+                {loc.name} ({loc.code})
+              </option>
+            ))}
+          </select>
+          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
+            Select the language for this post
           </p>
         </div>
 

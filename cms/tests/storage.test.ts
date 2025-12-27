@@ -59,7 +59,7 @@ import {
   storageList,
   storageExists,
   USE_KV,
-} from '../storage'
+} from '../src/lib/storage'
 
 // Mock @vercel/kv module
 const mockKvClient = {
@@ -169,8 +169,8 @@ describe('storage', () => {
       const value = '{"title": "Test"}'
 
       mockKvClient.get.mockRejectedValue(new Error('KV error'))
-      mockFs.existsSync.mockReturnValue(true)
-      mockFs.readFileSync.mockReturnValue(value)
+      mockExistsSync.mockReturnValue(true)
+      mockReadFileSync.mockReturnValue(value)
 
       const result = await storageGet(key)
 
@@ -373,4 +373,5 @@ describe('storage', () => {
     })
   })
 })
+
 

@@ -4,39 +4,148 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Footer from '@/components/Footer'
 import EditButton from '@/components/EditButton'
+import LocaleSelector from '@/components/LocaleSelector'
+import SafeHtml from '@/components/SafeHtml'
 
 export async function generateStaticParams() {
   const config = getConfig()
   const params: { slug: string[] }[] = []
 
-  // Add post routes
-  const posts = await getAllPosts()
+  // Add post routes from all enabled locales with locale prefix
+  const enabledLocales = config.locales?.filter(l => l.enabled) || []
   const postRoute = config.postRoute !== undefined && config.postRoute !== null ? config.postRoute : 'posts'
-  posts.forEach((post) => {
-    params.push({
-      slug: postRoute ? [postRoute, post.slug] : [post.slug]
+  
+  for (const locale of enabledLocales) {
+    const posts = await getAllPosts(locale.code)
+    posts.forEach((post) => {
+      // Format: [locale, postRoute?, slug] or [locale, slug]
+      if (postRoute) {
+        params.push({
+          slug: [locale.code, postRoute, post.slug]
+        })
+      } else {
+        params.push({
+          slug: [locale.code, post.slug]
+        })
+      }
+      // Also add without locale for backward compatibility (default locale only)
+      if (locale.code === config.defaultLocale) {
+        if (postRoute) {
+          params.push({
+            slug: [postRoute, post.slug]
+          })
+        } else {
+          params.push({
+            slug: [post.slug]
+          })
+        }
+      }
     })
-  })
+  }
 
-  // Add page routes
-  const pages = await getAllPages()
+  // Add page routes from all enabled locales with locale prefix
   const pageRoute = config.pageRoute !== undefined && config.pageRoute !== null ? config.pageRoute : ''
-  pages.forEach((page) => {
-    params.push({
-      slug: pageRoute ? [pageRoute, page.slug] : [page.slug]
+  for (const locale of enabledLocales) {
+    const pages = await getAllPages(locale.code)
+    pages.forEach((page) => {
+      if (pageRoute) {
+        params.push({
+          slug: [locale.code, pageRoute, page.slug]
+        })
+      } else {
+        params.push({
+          slug: [locale.code, page.slug]
+        })
+      }
+      // Also add without locale for backward compatibility (default locale only)
+      if (locale.code === config.defaultLocale) {
+        if (pageRoute) {
+          params.push({
+            slug: [pageRoute, page.slug]
+          })
+        } else {
+          params.push({
+            slug: [page.slug]
+          })
+        }
+      }
     })
-  })
+  }
 
   return params
 }
 
-export default async function DynamicContentPage({ params }: { params: Promise<{ slug: string[] }> }) {
+// Helper function to find content across locales
+async function findContentBySlug(
+  slug: string,
+  type: 'post' | 'page',
+  config: ReturnType<typeof getConfig>,
+  preferredLocale?: string
+): Promise<{ content: Post | Page | null; locale: string | null }> {
+  const enabledLocales = config.locales?.filter(l => l.enabled) || []
+  const defaultLocale = config.defaultLocale || 'en'
+  
+  // Try preferred locale first (from URL parameter)
+  if (preferredLocale && enabledLocales.some(l => l.code === preferredLocale)) {
+    let content: Post | Page | null = null
+    if (type === 'post') {
+      content = await getPostBySlug(slug, preferredLocale)
+    } else {
+      content = await getPageBySlug(slug, preferredLocale)
+    }
+    if (content) {
+      return { content, locale: preferredLocale }
+    }
+  }
+  
+  // Try default locale
+  let content: Post | Page | null = null
+  if (type === 'post') {
+    content = await getPostBySlug(slug, defaultLocale)
+  } else {
+    content = await getPageBySlug(slug, defaultLocale)
+  }
+  if (content) {
+    return { content, locale: defaultLocale }
+  }
+  
+  // Try other enabled locales
+  for (const locale of enabledLocales) {
+    if (locale.code === defaultLocale || locale.code === preferredLocale) continue // Already tried
+    
+    if (type === 'post') {
+      content = await getPostBySlug(slug, locale.code)
+    } else {
+      content = await getPageBySlug(slug, locale.code)
+    }
+    if (content) {
+      return { content, locale: locale.code }
+    }
+  }
+  
+  // Fallback to legacy format (no locale)
+  if (type === 'post') {
+    content = await getPostBySlug(slug)
+  } else {
+    content = await getPageBySlug(slug)
+  }
+  
+  return { content, locale: null }
+}
+
+export default async function DynamicContentPage({ 
+  params
+}: { 
+  params: Promise<{ slug: string[] }>
+}) {
   const config = getConfig()
   const postRoute = config.postRoute !== undefined && config.postRoute !== null ? config.postRoute : 'posts'
   const pageRoute = config.pageRoute !== undefined && config.pageRoute !== null ? config.pageRoute : ''
+  const enabledLocales = config.locales?.filter(l => l.enabled).map(l => l.code) || []
   
   // Await params in Next.js 16
   const resolvedParams = await params
+  
   // Handle array of slugs
   const slugArray = Array.isArray(resolvedParams.slug) ? resolvedParams.slug : [resolvedParams.slug]
   
@@ -44,38 +153,131 @@ export default async function DynamicContentPage({ params }: { params: Promise<{
   let content: Post | Page | null = null
   let contentType: 'post' | 'page' | null = null
   let actualSlug: string = ''
+  let foundLocale: string | null = null
+  let detectedLocale: string | null = null
 
+  // Check if first segment is a locale
+  if (slugArray.length > 0 && enabledLocales.includes(slugArray[0])) {
+    detectedLocale = slugArray[0]
+    slugArray.shift() // Remove locale from array
+    
+    // If after removing locale, array is empty, this is a locale-only path (homepage for that locale)
+    if (slugArray.length === 0) {
+      const locale = detectedLocale
+      const posts = await getAllPosts(locale)
+      const postRoute = config.postRoute !== undefined && config.postRoute !== null ? config.postRoute : 'posts'
+      const siteTitle = config.siteTitle || 'My Blog'
+      const siteSubtitle = config.siteSubtitle || 'Welcome to our simple file-based CMS'
+      
+      return (
+        <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+          <header style={{ marginBottom: '3rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <div style={{ flex: 1 }}>
+                <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>{siteTitle}</h1>
+                <p style={{ fontSize: '1.2rem', color: '#666' }}>
+                  {siteSubtitle}
+                </p>
+              </div>
+              <LocaleSelector 
+                locales={config.locales || []} 
+                currentLocale={locale}
+                defaultLocale={config.defaultLocale || 'en'}
+              />
+            </div>
+          </header>
+
+          <section>
+            <h2 style={{ marginBottom: '2rem', fontSize: '2rem' }}>Latest Posts</h2>
+            
+            {posts.length === 0 ? (
+              <div style={{ 
+                padding: '2rem', 
+                background: 'white', 
+                borderRadius: '8px',
+                textAlign: 'center',
+                color: '#666'
+              }}>
+                <p>No posts yet. Create your first post in the admin panel!</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '1.5rem' }}>
+                {posts.map((post) => (
+                  <Link 
+                    key={post.id} 
+                    href={postRoute 
+                      ? (locale !== config.defaultLocale ? `/${locale}/${postRoute}/${post.slug}` : `/${postRoute}/${post.slug}`)
+                      : (locale !== config.defaultLocale ? `/${locale}/${post.slug}` : `/${post.slug}`)
+                    }
+                    className="post-card"
+                    style={{
+                      display: 'block',
+                      padding: '2rem',
+                      background: 'white',
+                      borderRadius: '8px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      transition: 'transform 0.2s, box-shadow 0.2s'
+                    }}
+                  >
+                    <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
+                      {post.title}
+                    </h3>
+                    {post.excerpt && (
+                      <SafeHtml 
+                        html={post.excerpt}
+                        style={{ color: '#666', marginBottom: '0.5rem' }}
+                      />
+                    )}
+                    <time style={{ color: '#999', fontSize: '0.9rem' }}>
+                      {new Date(post.date).toLocaleDateString()}
+                    </time>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <Footer />
+        </main>
+      )
+    }
+  }
+
+  // Now process the remaining segments
   if (slugArray.length === 2) {
-    // Has route prefix
+    // Has route prefix: [route, slug]
     const [route, slug] = slugArray
     
     // Check configured post route (only if postRoute is not empty)
     if (postRoute && route === postRoute) {
-      const post = await getPostBySlug(slug)
-      if (post) {
-        content = post
+      const result = await findContentBySlug(slug, 'post', config, detectedLocale || undefined)
+      if (result.content) {
+        content = result.content as Post
         contentType = 'post'
         actualSlug = slug
+        foundLocale = result.locale
       }
     }
     
     // Check configured page route
     if (!content && pageRoute && route === pageRoute) {
-      const page = await getPageBySlug(slug)
-      if (page) {
-        content = page
+      const result = await findContentBySlug(slug, 'page', config, detectedLocale || undefined)
+      if (result.content) {
+        content = result.content as Page
         contentType = 'page'
         actualSlug = slug
+        foundLocale = result.locale
       }
     }
     
     // Backward compatibility: also check if it's the old "posts" route
     if (!content && route === 'posts' && postRoute !== 'posts' && postRoute !== '') {
-      const post = await getPostBySlug(slug)
-      if (post) {
-        content = post
+      const result = await findContentBySlug(slug, 'post', config, detectedLocale || undefined)
+      if (result.content) {
+        content = result.content as Post
         contentType = 'post'
         actualSlug = slug
+        foundLocale = result.locale
       }
     }
   } else if (slugArray.length === 1) {
@@ -84,21 +286,23 @@ export default async function DynamicContentPage({ params }: { params: Promise<{
     
     // First check if postRoute is empty - if so, this could be a post
     if (!postRoute) {
-      const post = await getPostBySlug(slug)
-      if (post) {
-        content = post
+      const result = await findContentBySlug(slug, 'post', config, detectedLocale || undefined)
+      if (result.content) {
+        content = result.content as Post
         contentType = 'post'
         actualSlug = slug
+        foundLocale = result.locale
       }
     }
     
     // If not a post and pageRoute is empty, check if it's a page
     if (!content && !pageRoute) {
-      const page = await getPageBySlug(slug)
-      if (page) {
-        content = page
+      const result = await findContentBySlug(slug, 'page', config, detectedLocale || undefined)
+      if (result.content) {
+        content = result.content as Page
         contentType = 'page'
         actualSlug = slug
+        foundLocale = result.locale
       }
     }
   }
@@ -110,19 +314,27 @@ export default async function DynamicContentPage({ params }: { params: Promise<{
   // Render post
   if (contentType === 'post' && content) {
     const post = content as Post
+    const displayLocale = foundLocale || detectedLocale || config.defaultLocale || 'en'
+    const homeUrl = displayLocale !== config.defaultLocale ? `/${displayLocale}` : '/'
     return (
       <main style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
-        <Link 
-          href="/"
-          style={{ 
-            display: 'inline-block',
-            marginBottom: '2rem',
-            color: '#0070f3',
-            textDecoration: 'underline'
-          }}
-        >
-          ← Back to home
-        </Link>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+          <Link 
+            href={homeUrl}
+            style={{ 
+              color: '#0070f3',
+              textDecoration: 'underline'
+            }}
+          >
+            ← Back to home
+          </Link>
+          <LocaleSelector 
+            locales={config.locales || []} 
+            currentLocale={displayLocale}
+            defaultLocale={config.defaultLocale || 'en'}
+            currentPath={`/${actualSlug}`}
+          />
+        </div>
 
         <article style={{ background: 'white', padding: '3rem', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
           <header style={{ marginBottom: '2rem' }}>
@@ -139,13 +351,13 @@ export default async function DynamicContentPage({ params }: { params: Promise<{
           </header>
 
           {post.content && /<[^>]+>/.test(post.content) ? (
-            <div 
+            <SafeHtml 
+              html={post.content}
+              className="prose prose-lg max-w-none"
               style={{ 
                 lineHeight: '1.8',
                 fontSize: '1.1rem'
               }}
-              className="prose prose-lg max-w-none"
-              dangerouslySetInnerHTML={{ __html: post.content }}
             />
           ) : (
             <div 
@@ -169,19 +381,27 @@ export default async function DynamicContentPage({ params }: { params: Promise<{
     notFound()
   }
   const page = content as Page
+  const displayLocale = foundLocale || detectedLocale || config.defaultLocale || 'en'
+  const homeUrl = displayLocale !== config.defaultLocale ? `/${displayLocale}` : '/'
   return (
     <main style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
-      <Link 
-        href="/"
-        style={{ 
-          display: 'inline-block',
-          marginBottom: '2rem',
-          color: '#0070f3',
-          textDecoration: 'underline'
-        }}
-      >
-        ← Back to home
-      </Link>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <Link 
+          href={homeUrl}
+          style={{ 
+            color: '#0070f3',
+            textDecoration: 'underline'
+          }}
+        >
+          ← Back to home
+        </Link>
+        <LocaleSelector 
+          locales={config.locales || []} 
+          currentLocale={displayLocale}
+          defaultLocale={config.defaultLocale || 'en'}
+          currentPath={`/${actualSlug}`}
+        />
+      </div>
 
       <article style={{ background: 'white', padding: '3rem', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
         <header style={{ marginBottom: '2rem' }}>
@@ -194,13 +414,13 @@ export default async function DynamicContentPage({ params }: { params: Promise<{
         </header>
 
         {page.content && /<[^>]+>/.test(page.content) ? (
-          <div 
+          <SafeHtml 
+            html={page.content}
+            className="prose prose-lg max-w-none"
             style={{ 
               lineHeight: '1.8',
               fontSize: '1.1rem'
             }}
-            className="prose prose-lg max-w-none"
-            dangerouslySetInnerHTML={{ __html: page.content }}
           />
         ) : (
           <div 

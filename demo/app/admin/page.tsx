@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
+// Force dynamic rendering - this page uses browser-only APIs
+export const dynamic = 'force-dynamic'
+
 export default function AdminLogin() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')

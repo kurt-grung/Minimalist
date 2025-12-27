@@ -2,5 +2,23 @@
   "postRoute": "",
   "pageRoute": "",
   "siteTitle": "Minimalist CMS",
-  "siteSubtitle": "Minimalist CMS, No backend."
+  "siteSubtitle": "Minimalist CMS, No backend.",
+  "defaultLocale": "en",
+  "locales": [
+    {
+      "code": "en",
+      "name": "English",
+      "enabled": true
+    },
+    {
+      "code": "de",
+      "name": "German",
+      "enabled": true
+    },
+    {
+      "code": "it",
+      "name": "Italian",
+      "enabled": true
+    }
+  ]
 }

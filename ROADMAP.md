@@ -1,6 +1,6 @@
-# Headless CMS Roadmap
+# Minimalist CMS Roadmap
 
-This document outlines the planned features, improvements, and enhancements for the Headless CMS project.
+This document outlines the planned features, improvements, and enhancements for the Minimalist CMS project.
 
 ## Current Status ✅ 
 
@@ -8,9 +8,13 @@ This document outlines the planned features, improvements, and enhancements for 
 - ✅ Create, edit, and delete posts
 - ✅ File-based content storage (JSON)
 - ✅ Static site generation
-- ✅ Settings management (site title, subtitle, route prefixes)
-- ✅ Sitemap generation
+- ✅ Settings management (site title, subtitle, route prefixes, locales)
+- ✅ Sitemap generation with multi-locale support
 - ✅ Basic authentication (JWT)
+- ✅ Multi-locale support (i18n) - Full implementation
+- ✅ Rich text editor with WYSIWYG and Markdown modes
+- ✅ Locale-based routing and content management
+- ✅ API routes with locale support
 
 ---
 
@@ -28,13 +32,15 @@ This document outlines the planned features, improvements, and enhancements for 
 
 **Status:** ✅ Complete - Built with zero external dependencies
 
-#### 1.2 Markdown Support
-- [ ] Markdown parsing and rendering
-- [ ] Markdown preview in editor
+#### 1.2 Markdown Support ✅ PARTIALLY COMPLETE
+- [x] Markdown parsing and rendering in editor
+- [x] Markdown mode toggle in editor
+- [x] HTML to Markdown conversion
+- [x] Markdown to HTML conversion
 - [ ] Support for frontmatter in markdown files
 - [ ] Migration tool: JSON → Markdown
 
-**Estimated effort:** 1-2 days
+**Status:** ✅ Core markdown support complete - Editor supports markdown mode with bidirectional conversion
 
 #### 1.3 Image Management
 - [ ] Image upload functionality
@@ -123,15 +129,16 @@ This document outlines the planned features, improvements, and enhancements for 
 **Estimated effort:** 1-2 days
 
 #### 3.4 UI/UX Improvements
+- [x] Confirmation dialogs (ConfirmModal component)
+- [x] Error modals with user-friendly messages
 - [ ] Better loading states
 - [ ] Error boundaries
 - [ ] Toast notifications (success/error messages)
-- [ ] Confirmation dialogs
 - [ ] Keyboard shortcuts in admin
 - [ ] Responsive design improvements
 - [ ] Dark mode support
 
-**Estimated effort:** 3-4 days
+**Status:** ✅ Partially complete - Confirmation dialogs and error handling implemented
 
 ---
 
@@ -149,14 +156,14 @@ This document outlines the planned features, improvements, and enhancements for 
 
 **Estimated effort:** 4-5 days
 
-#### 4.2 Content Validation
+#### 4.2 Content Validation ✅ PARTIALLY COMPLETE
+- [x] Content sanitization (SafeHtml component)
+- [x] XSS protection (HTML sanitization)
 - [ ] Schema validation for posts/pages
 - [ ] Slug uniqueness validation
 - [ ] Required field validation
-- [ ] Content sanitization
-- [ ] XSS protection
 
-**Estimated effort:** 2 days
+**Status:** ✅ Basic sanitization complete - HTML content is sanitized before rendering
 
 #### 4.3 Backup & Export
 - [ ] Export all content as JSON
@@ -199,13 +206,18 @@ This document outlines the planned features, improvements, and enhancements for 
 
 **Estimated effort:** 2 days
 
-#### 5.3 Internationalization (i18n)
-- [ ] Multi-language support
-- [ ] Language switcher
-- [ ] Translated content management
-- [ ] Locale-based routing
+#### 5.3 Internationalization (i18n) ✅ COMPLETE
+- [x] Multi-language support
+- [x] Language switcher (LocaleSelector component)
+- [x] Translated content management
+- [x] Locale-based routing (`/{locale}/posts/{slug}`)
+- [x] Locale configuration in settings
+- [x] Admin dashboard with locale switching
+- [x] API routes with locale support
+- [x] Sitemap generation with all locales
+- [x] Content storage per locale (`content/posts/{locale}/`)
 
-**Estimated effort:** 5-7 days
+**Status:** ✅ Complete - Full multi-locale support implemented
 
 #### 5.4 API Improvements
 - [ ] RESTful API documentation
@@ -231,14 +243,17 @@ This document outlines the planned features, improvements, and enhancements for 
 
 **Estimated effort:** 5-7 days
 
-#### 6.2 Documentation
-- [ ] API documentation
-- [ ] Deployment guides
+#### 6.2 Documentation ✅ PARTIALLY COMPLETE
+- [x] API documentation (Package README)
+- [x] Installation guide
+- [x] Demo project documentation
+- [x] Multi-locale documentation
+- [ ] Deployment guides (Vercel guide exists in docs)
 - [ ] Customization examples
 - [ ] Theme development guide
 - [ ] Plugin/extension system docs
 
-**Estimated effort:** 3-4 days
+**Status:** ✅ Core documentation complete - README files and installation guides added
 
 #### 6.3 Developer Tools
 - [ ] CLI tools for content management
@@ -320,8 +335,8 @@ If you'd like to contribute to any of these features:
 
 ## Version History
 
-- **v1.0.0** (Current) - Basic CMS functionality
-- **v1.1.0** (Planned) - Rich text editor, markdown support
+- **v1.0.0** - Basic CMS functionality
+- **v1.1.0** (Current) - Rich text editor, markdown support, multi-locale support
 - **v1.2.0** (Planned) - Image management, SEO enhancements
 - **v2.0.0** (Planned) - Categories, tags, draft workflow
 - **v2.1.0** (Planned) - Search, RSS, pagination
@@ -329,5 +344,5 @@ If you'd like to contribute to any of these features:
 
 ---
 
-*Last updated: 2024*
+*Last updated: January 2025*
 

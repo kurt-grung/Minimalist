@@ -33,7 +33,9 @@ export async function DELETE(
     }
 
     const { slug } = await params
-    const deleted = await deletePost(slug)
+    const { searchParams } = new URL(request.url)
+    const locale = searchParams.get('locale') || undefined
+    const deleted = await deletePost(slug, locale || undefined)
     if (!deleted) {
       return NextResponse.json(
         { error: 'Failed to delete post' },
@@ -73,15 +75,16 @@ export async function PUT(
     }
 
     const { slug } = await params
-    const existingPost = await getPostBySlug(slug)
+    const data = await request.json()
+    const locale = data.locale || undefined
+    
+    const existingPost = await getPostBySlug(slug, locale)
     if (!existingPost) {
       return NextResponse.json(
         { error: 'Post not found' },
         { status: 404 }
       )
     }
-
-    const data = await request.json()
     
     const post: Post = {
       ...existingPost,
@@ -93,7 +96,7 @@ export async function PUT(
       date: data.date ?? existingPost.date
     }
 
-    const saved = await savePost(post)
+    const saved = await savePost(post, locale)
     if (!saved) {
       return NextResponse.json(
         { error: 'Failed to update post' },

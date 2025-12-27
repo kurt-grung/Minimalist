@@ -10,16 +10,33 @@ exports.savePage = savePage;
 exports.deletePage = deletePage;
 const storage_1 = require("./storage");
 // Get all posts
-async function getAllPosts() {
+async function getAllPosts(locale) {
     try {
-        const keys = await (0, storage_1.storageList)('content/posts/');
         const posts = [];
-        for (const key of keys) {
-            if (key.endsWith('.json')) {
-                const slug = key.replace('.json', '');
-                const post = await getPostBySlug(slug);
-                if (post) {
-                    posts.push(post);
+        if (locale) {
+            // Get posts for specific locale
+            const keys = await (0, storage_1.storageList)(`content/posts/${locale}/`);
+            for (const key of keys) {
+                if (key.endsWith('.json')) {
+                    const slug = key.replace('.json', '');
+                    const post = await getPostBySlug(slug, locale);
+                    if (post) {
+                        posts.push(post);
+                    }
+                }
+            }
+        }
+        else {
+            // Get all posts from all locales (legacy support)
+            const keys = await (0, storage_1.storageList)('content/posts/');
+            for (const key of keys) {
+                if (key.endsWith('.json') && !key.includes('/')) {
+                    // Legacy format: content/posts/slug.json
+                    const slug = key.replace('.json', '');
+                    const post = await getPostBySlug(slug);
+                    if (post) {
+                        posts.push(post);
+                    }
                 }
             }
         }
@@ -31,9 +48,17 @@ async function getAllPosts() {
     }
 }
 // Get post by slug
-async function getPostBySlug(slug) {
+async function getPostBySlug(slug, locale) {
     try {
-        const content = await (0, storage_1.storageGet)(`content/posts/${slug}.json`);
+        let content = null;
+        if (locale) {
+            // Try locale-specific path first
+            content = await (0, storage_1.storageGet)(`content/posts/${locale}/${slug}.json`);
+        }
+        // Fallback to legacy format if locale-specific not found
+        if (!content) {
+            content = await (0, storage_1.storageGet)(`content/posts/${slug}.json`);
+        }
         if (!content) {
             return null;
         }
@@ -45,10 +70,16 @@ async function getPostBySlug(slug) {
     }
 }
 // Save post
-async function savePost(post) {
+async function savePost(post, locale) {
     try {
         const content = JSON.stringify(post, null, 2);
-        return await (0, storage_1.storageSet)(`content/posts/${post.slug}.json`, content);
+        if (locale) {
+            return await (0, storage_1.storageSet)(`content/posts/${locale}/${post.slug}.json`, content);
+        }
+        else {
+            // Legacy format
+            return await (0, storage_1.storageSet)(`content/posts/${post.slug}.json`, content);
+        }
     }
     catch (error) {
         console.error('Error saving post:', error);
@@ -56,9 +87,15 @@ async function savePost(post) {
     }
 }
 // Delete post
-async function deletePost(slug) {
+async function deletePost(slug, locale) {
     try {
-        return await (0, storage_1.storageDelete)(`content/posts/${slug}.json`);
+        if (locale) {
+            return await (0, storage_1.storageDelete)(`content/posts/${locale}/${slug}.json`);
+        }
+        else {
+            // Try legacy format
+            return await (0, storage_1.storageDelete)(`content/posts/${slug}.json`);
+        }
     }
     catch (error) {
         console.error('Error deleting post:', error);
@@ -66,16 +103,33 @@ async function deletePost(slug) {
     }
 }
 // Get all pages
-async function getAllPages() {
+async function getAllPages(locale) {
     try {
-        const keys = await (0, storage_1.storageList)('content/pages/');
         const pages = [];
-        for (const key of keys) {
-            if (key.endsWith('.json')) {
-                const slug = key.replace('.json', '');
-                const page = await getPageBySlug(slug);
-                if (page) {
-                    pages.push(page);
+        if (locale) {
+            // Get pages for specific locale
+            const keys = await (0, storage_1.storageList)(`content/pages/${locale}/`);
+            for (const key of keys) {
+                if (key.endsWith('.json')) {
+                    const slug = key.replace('.json', '');
+                    const page = await getPageBySlug(slug, locale);
+                    if (page) {
+                        pages.push(page);
+                    }
+                }
+            }
+        }
+        else {
+            // Get all pages from all locales (legacy support)
+            const keys = await (0, storage_1.storageList)('content/pages/');
+            for (const key of keys) {
+                if (key.endsWith('.json') && !key.includes('/')) {
+                    // Legacy format: content/pages/slug.json
+                    const slug = key.replace('.json', '');
+                    const page = await getPageBySlug(slug);
+                    if (page) {
+                        pages.push(page);
+                    }
                 }
             }
         }
@@ -87,9 +141,17 @@ async function getAllPages() {
     }
 }
 // Get page by slug
-async function getPageBySlug(slug) {
+async function getPageBySlug(slug, locale) {
     try {
-        const content = await (0, storage_1.storageGet)(`content/pages/${slug}.json`);
+        let content = null;
+        if (locale) {
+            // Try locale-specific path first
+            content = await (0, storage_1.storageGet)(`content/pages/${locale}/${slug}.json`);
+        }
+        // Fallback to legacy format if locale-specific not found
+        if (!content) {
+            content = await (0, storage_1.storageGet)(`content/pages/${slug}.json`);
+        }
         if (!content) {
             return null;
         }
@@ -101,10 +163,16 @@ async function getPageBySlug(slug) {
     }
 }
 // Save page
-async function savePage(page) {
+async function savePage(page, locale) {
     try {
         const content = JSON.stringify(page, null, 2);
-        return await (0, storage_1.storageSet)(`content/pages/${page.slug}.json`, content);
+        if (locale) {
+            return await (0, storage_1.storageSet)(`content/pages/${locale}/${page.slug}.json`, content);
+        }
+        else {
+            // Legacy format
+            return await (0, storage_1.storageSet)(`content/pages/${page.slug}.json`, content);
+        }
     }
     catch (error) {
         console.error('Error saving page:', error);
@@ -112,9 +180,15 @@ async function savePage(page) {
     }
 }
 // Delete page
-async function deletePage(slug) {
+async function deletePage(slug, locale) {
     try {
-        return await (0, storage_1.storageDelete)(`content/pages/${slug}.json`);
+        if (locale) {
+            return await (0, storage_1.storageDelete)(`content/pages/${locale}/${slug}.json`);
+        }
+        else {
+            // Try legacy format
+            return await (0, storage_1.storageDelete)(`content/pages/${slug}.json`);
+        }
     }
     catch (error) {
         console.error('Error deleting page:', error);

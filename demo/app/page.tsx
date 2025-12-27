@@ -2,10 +2,14 @@ import Link from 'next/link'
 import { getAllPosts } from '@/lib/content'
 import { getConfig } from '@/lib/config'
 import Footer from '@/components/Footer'
+import LocaleSelector from '@/components/LocaleSelector'
+import SafeHtml from '@/components/SafeHtml'
 
 export default async function Home() {
-  const posts = await getAllPosts()
   const config = getConfig()
+  // Load posts from default locale for homepage
+  const locale = config.defaultLocale || 'en'
+  const posts = await getAllPosts(locale)
   const postRoute = config.postRoute !== undefined && config.postRoute !== null ? config.postRoute : 'posts'
   const siteTitle = config.siteTitle || 'My Blog'
   const siteSubtitle = config.siteSubtitle || 'Welcome to our simple file-based CMS'
@@ -13,10 +17,19 @@ export default async function Home() {
   return (
     <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
       <header style={{ marginBottom: '3rem' }}>
-        <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>{siteTitle}</h1>
-        <p style={{ fontSize: '1.2rem', color: '#666' }}>
-          {siteSubtitle}
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+          <div style={{ flex: 1 }}>
+            <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>{siteTitle}</h1>
+            <p style={{ fontSize: '1.2rem', color: '#666' }}>
+              {siteSubtitle}
+            </p>
+          </div>
+          <LocaleSelector 
+            locales={config.locales || []} 
+            currentLocale={locale}
+            defaultLocale={config.defaultLocale || 'en'}
+          />
+        </div>
       </header>
 
       <section>
@@ -37,7 +50,10 @@ export default async function Home() {
             {posts.map((post) => (
               <Link 
                 key={post.id} 
-                href={postRoute ? `/${postRoute}/${post.slug}` : `/${post.slug}`}
+                href={postRoute 
+                  ? (locale !== config.defaultLocale ? `/${locale}/${postRoute}/${post.slug}` : `/${postRoute}/${post.slug}`)
+                  : (locale !== config.defaultLocale ? `/${locale}/${post.slug}` : `/${post.slug}`)
+                }
                 className="post-card"
                 style={{
                   display: 'block',
@@ -52,9 +68,10 @@ export default async function Home() {
                   {post.title}
                 </h3>
                 {post.excerpt && (
-                  <p style={{ color: '#666', marginBottom: '0.5rem' }}>
-                    {post.excerpt}
-                  </p>
+                  <SafeHtml 
+                    html={post.excerpt}
+                    style={{ color: '#666', marginBottom: '0.5rem' }}
+                  />
                 )}
                 <time style={{ color: '#999', fontSize: '0.9rem' }}>
                   {new Date(post.date).toLocaleDateString()}

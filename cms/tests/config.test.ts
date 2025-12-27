@@ -24,7 +24,7 @@ import {
   getConfig,
   updateConfig,
   type SiteConfig,
-} from '../config'
+} from '../src/lib/config'
 
 describe('config', () => {
   const defaultConfig: SiteConfig = {
@@ -32,6 +32,10 @@ describe('config', () => {
     siteSubtitle: 'Welcome to our simple file-based CMS',
     postRoute: 'posts',
     pageRoute: '',
+    defaultLocale: 'en',
+    locales: [
+      { code: 'en', name: 'English', enabled: true }
+    ]
   }
 
   beforeEach(() => {
@@ -81,6 +85,10 @@ describe('config', () => {
         siteSubtitle: 'Custom subtitle',
         postRoute: 'articles',
         pageRoute: 'pages',
+        defaultLocale: 'en',
+        locales: [
+          { code: 'en', name: 'English', enabled: true }
+        ]
       }
       mockExistsSync.mockReturnValue(true)
       mockReadFileSync.mockReturnValue(JSON.stringify(customConfig))
@@ -121,6 +129,10 @@ describe('config', () => {
         siteSubtitle: 'Existing subtitle',
         postRoute: 'posts',
         pageRoute: '',
+        defaultLocale: 'en',
+        locales: [
+          { code: 'en', name: 'English', enabled: true }
+        ]
       }
       const update: Partial<SiteConfig> = {
         siteTitle: 'Updated Blog',
@@ -131,6 +143,10 @@ describe('config', () => {
         siteSubtitle: 'Existing subtitle',
         postRoute: 'articles',
         pageRoute: '',
+        defaultLocale: 'en',
+        locales: [
+          { code: 'en', name: 'English', enabled: true }
+        ]
       }
 
       mockExistsSync.mockReturnValue(true)
@@ -177,6 +193,10 @@ describe('config', () => {
         siteSubtitle: 'My subtitle',
         postRoute: 'posts',
         pageRoute: '',
+        defaultLocale: 'en',
+        locales: [
+          { code: 'en', name: 'English', enabled: true }
+        ]
       }
       const update: Partial<SiteConfig> = {
         siteSubtitle: 'Updated subtitle',
@@ -195,4 +215,5 @@ describe('config', () => {
     })
   })
 })
+
 

@@ -1,34 +1,61 @@
-# Minimalist 
+# Minimalist CMS
 
-Minimalist CMS, No backend.
+A simple, file-based headless CMS for Next.js. No database required—content is stored as JSON files.
 
-## Structure
+## Features
+
+- ✅ **File-based storage** - No database needed
+- ✅ **Multi-locale support** - Create content in multiple languages
+- ✅ **TypeScript support** - Full TypeScript definitions
+- ✅ **Vercel KV support** - Automatic fallback to Vercel KV in production
+- ✅ **JWT authentication** - Secure admin authentication
+- ✅ **Zero configuration** - Works out of the box
+- ✅ **Static site generation** - Perfect for Next.js static exports
+- ✅ **Rich text editor** - WYSIWYG editor with Markdown support
+
+## Project Structure
 
 ```
 minimalist/
-├── cms/                  # Package
-│   ├── src/              # Source
-│   ├── templates/        # Templates
+├── cms/                  # NPM Package
+│   ├── src/              # Source code
+│   ├── templates/        # Next.js templates
 │   └── package.json
 │
-└── demo/                 # Example 
-    ├── app/              # App
-    ├── lib/              # Library
+└── demo/                 # Example/Demo project
+    ├── app/              # Next.js app directory
+    ├── lib/              # Library functions
+    ├── content/          # Content files (posts, pages)
     └── package.json
 ```
 
 ## Quick Start
 
-### Build Everything
+### Using the Package
+
+In your own Next.js project:
+
+```bash
+npm install minimalist
+npx minimalist init
+npm run dev
+```
+
+Visit `http://localhost:3000/admin` (default credentials: `admin` / `admin123`)
+
+### Running the Demo
 
 From the repo root:
 
 ```bash
-npm run build  # Builds CMS package and installs into demo
-npm run dev    # Runs the demo
+# Build CMS package and install into demo
+npm run build
+
+# Run the demo
+npm run dev
 ```
 
-### Individual Commands
+Or individually:
 
 ```bash
 # Build package only
@@ -42,20 +69,44 @@ npm install
 npm run dev
 ```
 
-Visit `http://localhost:3000/cms` (default: admin/admin123)
+**Access points:**
+- Admin panel: `http://localhost:3000/admin`
+- CMS interface: `http://localhost:3000/cms`
+- Default credentials: `admin` / `admin123`
 
-## Using the Package
+## Installation
 
-In your own Next.js project:
-
-```bash
-npm install minimalist-cms
-npx minimalist-cms init
-```
+See the [Installation Guide](./demo/INSTALLATION.md) for detailed setup instructions.
 
 ## Documentation
 
-- [Package README](./cms/README.md) - Package documentation
+- [Package README](./cms/README.md) - Complete API documentation
 - [Demo README](./demo/README.md) - Demo project guide
 - [Installation Guide](./demo/INSTALLATION.md) - Setup instructions
-- [Roadmap](./demo/roadmap.md) - Planned features
+- [Roadmap](./ROADMAP.md) - Planned features and enhancements
+
+## Usage Example
+
+```typescript
+import { getAllPosts, savePost, Post } from 'minimalist'
+
+// Get all posts
+const posts = await getAllPosts('en')
+
+// Create a post
+const post: Post = {
+  id: 'post-123',
+  title: 'My Post',
+  slug: 'my-post',
+  content: '<p>Post content...</p>',
+  excerpt: 'Short description',
+  date: new Date().toISOString(),
+  author: 'John Doe'
+}
+
+await savePost(post, 'en')
+```
+
+## License
+
+MIT

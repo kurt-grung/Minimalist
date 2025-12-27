@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import ConfirmModal from '@/components/ConfirmModal'
+
+// Force dynamic rendering - this page uses browser-only APIs
+export const dynamic = 'force-dynamic'
 
 interface Post {
   id: string
@@ -15,19 +18,30 @@ interface Post {
   author?: string
 }
 
+interface Locale {
+  code: string
+  name: string
+  enabled: boolean
+}
+
 interface SiteConfig {
   siteTitle: string
   siteSubtitle: string
   postRoute: string
   pageRoute: string
+  defaultLocale: string
+  locales: Locale[]
 }
 
 export default function AdminDashboard() {
+  const searchParams = useSearchParams()
+  const urlLocale = searchParams.get('locale')
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [isLocalhost, setIsLocalhost] = useState(false)
-  const [config, setConfig] = useState<SiteConfig>({ siteTitle: 'My Blog', siteSubtitle: 'Welcome to our simple file-based CMS', postRoute: 'posts', pageRoute: '' })
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; slug: string | null }>({ isOpen: false, slug: null })
+  const [locale, setLocale] = useState<string>('')
+  const [config, setConfig] = useState<SiteConfig>({ siteTitle: 'My Blog', siteSubtitle: 'Welcome to our simple file-based CMS', postRoute: 'posts', pageRoute: '', defaultLocale: 'en', locales: [] })
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; slug: string | null; locale?: string }>({ isOpen: false, slug: null })
   const [errorModal, setErrorModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' })
   const router = useRouter()
 
@@ -46,7 +60,7 @@ export default function AdminDashboard() {
     }
     
     checkAuth()
-    loadPosts()
+    // Load settings first, then posts will load when locale is set
     loadSettings()
   }, [])
 
@@ -56,11 +70,26 @@ export default function AdminDashboard() {
       if (response.ok) {
         const data = await response.json()
         setConfig(data)
+        // Set locale from URL parameter first, then default locale
+        if (urlLocale && data.locales?.some((l: Locale) => l.code === urlLocale && l.enabled)) {
+          setLocale(urlLocale)
+        } else if (!locale && data.defaultLocale) {
+          setLocale(data.defaultLocale)
+        }
       }
     } catch (err) {
       console.error('Failed to load settings:', err)
     }
   }
+
+  // Initialize locale when config loads or URL locale changes
+  useEffect(() => {
+    if (urlLocale && config.locales?.some((l: Locale) => l.code === urlLocale && l.enabled)) {
+      setLocale(urlLocale)
+    } else if (config.defaultLocale && !locale) {
+      setLocale(config.defaultLocale)
+    }
+  }, [config.defaultLocale, config.locales, locale, urlLocale])
 
   const checkAuth = async () => {
     const token = localStorage.getItem('admin_token')
@@ -88,9 +117,10 @@ export default function AdminDashboard() {
     }
   }
 
-  const loadPosts = async () => {
+  const loadPosts = async (selectedLocale?: string) => {
     try {
-      const response = await fetch('/api/posts')
+      const localeToUse = selectedLocale || locale || config.defaultLocale || 'en'
+      const response = await fetch(`/api/posts?locale=${localeToUse}`)
       if (response.ok) {
         const data = await response.json()
         setPosts(data)
@@ -104,13 +134,29 @@ export default function AdminDashboard() {
     }
   }
 
+  // Reload posts when locale changes (from state or URL) or config loads
+  useEffect(() => {
+    const localeToUse = locale || urlLocale || config.defaultLocale || 'en'
+    // Load posts once we have a locale (even if config.locales is still loading)
+    if (localeToUse) {
+      loadPosts(localeToUse)
+    } else if (config.defaultLocale) {
+      // Fallback: if we have defaultLocale but no locale set yet, load with default
+      loadPosts(config.defaultLocale)
+    } else {
+      // If we still don't have a locale, try loading with 'en' as fallback
+      loadPosts('en')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale, urlLocale, config.defaultLocale])
+
   const handleLogout = () => {
     localStorage.removeItem('admin_token')
     router.push('/admin')
   }
 
   const handleDeleteClick = (slug: string) => {
-    setDeleteModal({ isOpen: true, slug })
+    setDeleteModal({ isOpen: true, slug, locale: locale || config.defaultLocale })
   }
 
   const handleDeleteConfirm = async () => {
@@ -118,7 +164,8 @@ export default function AdminDashboard() {
 
     try {
       const token = localStorage.getItem('admin_token')
-      const response = await fetch(`/api/posts/${deleteModal.slug}`, {
+      const deleteLocale = deleteModal.locale || locale || config.defaultLocale
+      const response = await fetch(`/api/posts/${deleteModal.slug}?locale=${deleteLocale}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -127,7 +174,7 @@ export default function AdminDashboard() {
 
       if (response.ok) {
         setDeleteModal({ isOpen: false, slug: null })
-        loadPosts()
+        loadPosts(locale || config.defaultLocale)
       } else {
         setDeleteModal({ isOpen: false, slug: null })
         setErrorModal({ isOpen: true, message: 'Failed to delete post' })
@@ -218,7 +265,36 @@ export default function AdminDashboard() {
       </header>
 
       <section>
-        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.5rem' }}>Posts</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Posts</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label style={{ fontSize: '0.9rem', fontWeight: '500' }}>Locale:</label>
+            <select
+              value={locale || config.defaultLocale}
+              onChange={(e) => {
+                const newLocale = e.target.value
+                setLocale(newLocale)
+                loadPosts(newLocale)
+                // Update URL with new locale
+                router.push(`/admin/dashboard?locale=${newLocale}`)
+              }}
+              style={{
+                padding: '0.5rem 0.75rem',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                backgroundColor: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              {config.locales?.filter(l => l.enabled).map((loc) => (
+                <option key={loc.code} value={loc.code}>
+                  {loc.name} ({loc.code})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         
         {posts.length === 0 ? (
           <div style={{ 
@@ -266,7 +342,7 @@ export default function AdminDashboard() {
                     View
                   </Link>
                   <Link
-                    href={`/admin/dashboard/edit/${encodeURIComponent(post.slug)}`}
+                    href={`/admin/dashboard/edit/${encodeURIComponent(post.slug)}?locale=${locale || config.defaultLocale}`}
                     style={{
                       padding: '0.5rem 1rem',
                       background: '#0070f3',
@@ -484,9 +560,6 @@ function SettingsEditor({ config, onClose }: { config: SiteConfig; onClose: () =
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-              Post Route Prefix
-            </label>
             <input
               type="text"
               value={postRoute}

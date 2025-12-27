@@ -28,7 +28,7 @@ import {
   createToken,
   verifyToken,
   type User,
-} from '../auth'
+} from '../src/lib/auth'
 
 describe('auth', () => {
   const originalEnv = process.env
@@ -260,4 +260,5 @@ describe('auth', () => {
     })
   })
 })
+
 

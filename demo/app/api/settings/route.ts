@@ -47,7 +47,9 @@ export async function PUT(request: NextRequest) {
       siteTitle: data.siteTitle,
       siteSubtitle: data.siteSubtitle,
       postRoute: data.postRoute,
-      pageRoute: data.pageRoute
+      pageRoute: data.pageRoute,
+      defaultLocale: data.defaultLocale,
+      locales: data.locales
     })
 
     return NextResponse.json(config)

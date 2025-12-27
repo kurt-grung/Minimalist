@@ -1,10 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import RichTextEditor from '@/components/RichTextEditor'
 import ConfirmModal from '@/components/ConfirmModal'
+
+// Force dynamic rendering - this page uses browser-only APIs
+export const dynamic = 'force-dynamic'
 
 interface Post {
   id: string
@@ -16,31 +19,47 @@ interface Post {
   author?: string
 }
 
+interface Locale {
+  code: string
+  name: string
+  enabled: boolean
+}
+
 interface SiteConfig {
   siteTitle: string
   siteSubtitle: string
   postRoute: string
   pageRoute: string
+  defaultLocale: string
+  locales: Locale[]
 }
 
 export default function EditPostPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   // Decode the slug parameter (handles URL-encoded spaces and special characters)
   const slug = decodeURIComponent(params.slug as string)
+  // Get locale from URL query parameter
+  const urlLocale = searchParams.get('locale')
   const [post, setPost] = useState<Post | null>(null)
   const [title, setTitle] = useState('')
   const [postSlug, setPostSlug] = useState('')
   const [content, setContent] = useState('')
   const [excerpt, setExcerpt] = useState('')
   const [author, setAuthor] = useState('')
+  const [locale, setLocale] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [isLocalhost, setIsLocalhost] = useState(false)
   const [errorModal, setErrorModal] = useState<{ isOpen: boolean; message: string; onConfirm?: () => void }>({ isOpen: false, message: '' })
-  const [config, setConfig] = useState<SiteConfig>({ siteTitle: 'My Blog', siteSubtitle: 'Welcome to our simple file-based CMS', postRoute: 'posts', pageRoute: '' })
+  const [config, setConfig] = useState<SiteConfig>({ siteTitle: 'My Blog', siteSubtitle: 'Welcome to our simple file-based CMS', postRoute: 'posts', pageRoute: '', defaultLocale: 'en', locales: [] })
   const router = useRouter()
+  const userChangedLocale = useRef(false) // Track if user manually changed locale
 
   useEffect(() => {
+    // Reset user changed locale flag when slug changes (new post being edited)
+    userChangedLocale.current = false
+    
     // Check if we're on localhost
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname
@@ -56,8 +75,31 @@ export default function EditPostPage() {
     
     checkAuth()
     loadSettings()
-    loadPost()
   }, [slug])
+
+  // Initialize locale when config loads or URL locale changes (only if user didn't manually change it)
+  useEffect(() => {
+    if (userChangedLocale.current) {
+      // User manually changed locale, don't reset it
+      return
+    }
+    if (urlLocale && config.locales?.some((l: Locale) => l.code === urlLocale && l.enabled)) {
+      setLocale(urlLocale)
+    } else if (config.defaultLocale && !locale) {
+      setLocale(config.defaultLocale)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.defaultLocale, config.locales, urlLocale])
+
+  // Load post when slug or URL locale changes (initial load)
+  // Don't reload when locale state changes (that's handled by the select onChange)
+  useEffect(() => {
+    if ((urlLocale || config.defaultLocale) && config.locales && config.locales.length > 0 && !post) {
+      const localeToUse = urlLocale || config.defaultLocale
+      loadPost(localeToUse)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, urlLocale, config.defaultLocale, config.locales])
 
   const checkAuth = async () => {
     const token = localStorage.getItem('admin_token')
@@ -73,15 +115,25 @@ export default function EditPostPage() {
       if (response.ok) {
         const data = await response.json()
         setConfig(data)
+        // Set locale from URL parameter first, then default locale
+        if (urlLocale && data.locales?.some((l: Locale) => l.code === urlLocale && l.enabled)) {
+          setLocale(urlLocale)
+        } else if (!locale && data.defaultLocale) {
+          setLocale(data.defaultLocale)
+        }
       }
     } catch (err) {
       console.error('Failed to load settings:', err)
     }
   }
 
-  const loadPost = async () => {
+  const loadPost = async (postLocale?: string, showLoading: boolean = true) => {
+    if (showLoading) {
+      setLoading(true)
+    }
     try {
-      const response = await fetch('/api/posts')
+      const localeToUse = postLocale || locale || config.defaultLocale
+      const response = await fetch(`/api/posts?locale=${localeToUse}`)
       if (response.ok) {
         const posts: Post[] = await response.json()
         const foundPost = posts.find(p => p.slug === slug)
@@ -92,15 +144,28 @@ export default function EditPostPage() {
           setContent(foundPost.content)
           setExcerpt(foundPost.excerpt || '')
           setAuthor(foundPost.author || '')
+          // Set locale if not already set
+          if (!locale && localeToUse) {
+            setLocale(localeToUse)
+          }
         } else {
-          setErrorModal({
-            isOpen: true,
-            message: 'Post not found',
-            onConfirm: () => {
-              setErrorModal({ isOpen: false, message: '' })
-              router.push('/admin/dashboard')
-            }
+          // Post not found in requested locale - create empty post structure
+          // Don't pre-fill with content from other locales - start fresh
+          setPost({
+            id: `post-${Date.now()}`,
+            title: '',
+            slug: slug,
+            content: '',
+            excerpt: '',
+            date: new Date().toISOString(),
+            author: ''
           })
+          setTitle('')
+          setPostSlug(slug)
+          setContent('')
+          setExcerpt('')
+          setAuthor('')
+          setLocale(localeToUse)
         }
       } else {
         setErrorModal({
@@ -122,13 +187,15 @@ export default function EditPostPage() {
         }
       })
     } finally {
-      setLoading(false)
+      if (showLoading) {
+        setLoading(false)
+      }
     }
   }
 
   const postRoute = config.postRoute !== undefined && config.postRoute !== null ? config.postRoute : 'posts'
   const postRouteCapitalized = postRoute ? (postRoute.charAt(0).toUpperCase() + postRoute.slice(1)) : ''
-  const slugChanged = post && postSlug !== post.slug
+  const slugChanged = post && post.slug && postSlug !== post.slug
 
   // Generate excerpt from content
   const generateExcerpt = (content: string): string => {
@@ -173,7 +240,18 @@ export default function EditPostPage() {
   // Auto-save as draft when navigating away
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (post && (title !== post.title || content !== post.content || postSlug !== post.slug || excerpt !== post.excerpt || author !== post.author)) {
+      if (post) {
+        const hasChanges = 
+          title !== post.title || 
+          content !== post.content || 
+          postSlug !== post.slug || 
+          excerpt !== (post.excerpt || '') || 
+          author !== (post.author || '')
+        if (hasChanges) {
+          saveDraft()
+        }
+      } else if (title || content) {
+        // New post with content - save draft
         saveDraft()
       }
     }
@@ -183,14 +261,15 @@ export default function EditPostPage() {
   }, [title, content, postSlug, excerpt, author, post])
 
   const saveDraft = async () => {
-    if (!post) return
+    if (!post && !title && !content) return // Nothing to save
 
-    const hasChanges = 
+    const hasChanges = post ? (
       title !== post.title ||
       postSlug !== post.slug ||
       content !== post.content ||
       excerpt !== (post.excerpt || '') ||
       author !== (post.author || '')
+    ) : (title || content) // If no post, any content is a change
 
     if (!hasChanges) return
 
@@ -200,32 +279,35 @@ export default function EditPostPage() {
       // Save to localStorage as backup
       const draftData = {
         title,
-        slug: postSlug,
+        slug: postSlug || slug,
         content,
         excerpt,
         author,
-        date: post.date,
+        date: post?.date || new Date().toISOString(),
         isDraft: true,
-        originalSlug: post.slug
+        originalSlug: post?.slug || slug
       }
-      localStorage.setItem(`draft_${postSlug}`, JSON.stringify(draftData))
+      localStorage.setItem(`draft_${postSlug || slug}`, JSON.stringify(draftData))
 
-      // Save to server as draft (keep original slug to avoid conflicts)
-      await fetch(`/api/posts/${post.slug}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          title,
-          slug: post.slug, // Keep original slug for draft saves
-          content,
-          excerpt,
-          author,
-          date: post.date
+      // Save to server as draft (only if post exists)
+      if (post && post.slug) {
+        await fetch(`/api/posts/${post.slug}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            title,
+            slug: post.slug, // Keep original slug for draft saves
+            content,
+            excerpt,
+            author,
+            date: post.date,
+            locale: locale || config.defaultLocale
+          })
         })
-      })
+      }
     } catch (err) {
       console.log('Draft saved to localStorage')
     }
@@ -238,9 +320,18 @@ export default function EditPostPage() {
     try {
       const token = localStorage.getItem('admin_token')
       const finalSlug = postSlug || title.toLowerCase().replace(/\s+/g, '-')
+      const currentLocale = locale || urlLocale || config.defaultLocale
       
-      // If slug changed, we need to create new and delete old
-      if (slugChanged && post) {
+      // Check if post exists in the current locale
+      const checkResponse = await fetch(`/api/posts?locale=${currentLocale}`)
+      let postExists = false
+      if (checkResponse.ok) {
+        const posts: Post[] = await checkResponse.json()
+        postExists = posts.some(p => p.slug === slug)
+      }
+      
+      // If slug changed and post exists, we need to create new and delete old
+      if (slugChanged && post && postExists) {
         // Create new post with new slug
         const createResponse = await fetch('/api/posts', {
           method: 'POST',
@@ -254,7 +345,8 @@ export default function EditPostPage() {
             content,
             excerpt,
             author,
-            date: post.date
+            date: post.date,
+            locale: currentLocale
           })
         })
 
@@ -269,7 +361,7 @@ export default function EditPostPage() {
         }
 
         // Delete old post
-        const deleteResponse = await fetch(`/api/posts/${post.slug}`, {
+        const deleteResponse = await fetch(`/api/posts/${post.slug}?locale=${currentLocale}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -282,9 +374,37 @@ export default function EditPostPage() {
             message: 'New post created but failed to delete old post. Please delete it manually.'
           })
         }
+      } else if (!postExists || !post) {
+        // Post doesn't exist in this locale - create new one
+        const createResponse = await fetch('/api/posts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            title,
+            slug: finalSlug,
+            content,
+            excerpt,
+            author,
+            date: post?.date || new Date().toISOString(),
+            locale: currentLocale
+          })
+        })
+
+        if (!createResponse.ok) {
+          const data = await createResponse.json()
+          setSaving(false)
+          setErrorModal({
+            isOpen: true,
+            message: data.error || 'Failed to create post'
+          })
+          return
+        }
       } else {
-        // Normal update
-        const response = await fetch(`/api/posts/${post?.slug}`, {
+        // Normal update - post exists in this locale
+        const response = await fetch(`/api/posts/${post.slug}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -296,7 +416,8 @@ export default function EditPostPage() {
             content,
             excerpt,
             author,
-            date: post?.date || new Date().toISOString()
+            date: post.date || new Date().toISOString(),
+            locale: currentLocale
           })
         })
 
@@ -314,7 +435,8 @@ export default function EditPostPage() {
       // Clear draft from localStorage
       localStorage.removeItem(`draft_${postSlug}`)
       
-      router.push('/admin/dashboard')
+      // Redirect back to dashboard with the locale preserved
+      router.push(`/admin/dashboard?locale=${currentLocale}`)
     } catch (err) {
       setSaving(false)
       setErrorModal({
@@ -337,14 +459,8 @@ export default function EditPostPage() {
     return null
   }
 
-  if (!post) {
-    return (
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-        <p>Post not found</p>
-        <Link href="/admin/dashboard">Back to Dashboard</Link>
-      </main>
-    )
-  }
+  // Show form even if post doesn't exist (allows creating new post in new locale)
+  // post will be set with empty/default values if not found
 
   return (
     <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
@@ -355,7 +471,9 @@ export default function EditPostPage() {
         marginBottom: '2rem'
       }}>
         <div>
-          <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Edit {postRouteCapitalized || 'Post'}</h1>
+          <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+            {post && post.title ? `Edit ${postRouteCapitalized || 'Post'}` : `Create ${postRouteCapitalized || 'Post'} in ${config.locales?.find(l => l.code === locale)?.name || locale}`}
+          </h1>
           <Link href="/admin/dashboard" style={{ color: '#0070f3' }}>← Back to Dashboard</Link>
         </div>
       </header>
@@ -389,27 +507,6 @@ export default function EditPostPage() {
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
             Slug {slugChanged && <span style={{ color: '#ff9800', fontSize: '0.9rem' }}>(changing slug will create a new {postRouteCapitalized || 'post'})</span>}
           </label>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.5rem',
-            marginBottom: '0.5rem',
-            padding: '0.5rem',
-            background: '#f5f5f5',
-            borderRadius: '4px',
-            fontSize: '0.9rem',
-            color: '#666'
-          }}>
-            <span style={{ fontWeight: '500' }}>{postRouteCapitalized || 'Post'} Route Prefix:</span>
-            <span style={{ 
-              background: 'white', 
-              padding: '0.25rem 0.5rem', 
-              borderRadius: '4px',
-              fontFamily: 'monospace'
-            }}>
-              {postRoute ? `/${postRoute}/` : '(root)'}
-            </span>
-          </div>
           <input
             type="text"
             value={postSlug}
@@ -435,6 +532,42 @@ export default function EditPostPage() {
               ⚠️ Changing the slug will create a new {postRouteCapitalized || 'post'} and delete the old one.
             </p>
           )}
+        </div>
+
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+            Locale *
+          </label>
+          <select
+            value={locale || config.defaultLocale}
+            onChange={(e) => {
+              const newLocale = e.target.value
+              userChangedLocale.current = true // Mark that user manually changed locale
+              setLocale(newLocale)
+              // Update URL to reflect the new locale
+              router.push(`/admin/dashboard/edit/${encodeURIComponent(slug)}?locale=${newLocale}`, { scroll: false })
+              // Reload post with new locale (without showing loading state)
+              loadPost(newLocale, false)
+            }}
+            required
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              fontSize: '1rem',
+              backgroundColor: 'white'
+            }}
+          >
+            {config.locales?.filter(l => l.enabled).map((loc) => (
+              <option key={loc.code} value={loc.code}>
+                {loc.name} ({loc.code})
+              </option>
+            ))}
+          </select>
+          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
+            Select the language for this post. Changing locale will load the post in that language if it exists.
+          </p>
         </div>
 
         <div style={{ marginBottom: '1rem' }}>
@@ -495,7 +628,10 @@ export default function EditPostPage() {
               cursor: saving ? 'not-allowed' : 'pointer'
             }}
           >
-            {saving ? 'Updating...' : `Update ${postRouteCapitalized || 'Post'}`}
+            {saving 
+              ? (post && post.title ? 'Updating...' : 'Creating...') 
+              : (post && post.title ? `Update ${postRouteCapitalized || 'Post'}` : `Create ${postRouteCapitalized || 'Post'}`)
+            }
           </button>
         </div>
       </form>

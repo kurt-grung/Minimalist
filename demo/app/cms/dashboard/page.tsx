@@ -462,27 +462,6 @@ function PostEditor({ post, config, onClose }: { post?: Post; config: SiteConfig
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
               Slug {isEditing && <span style={{ color: '#999', fontSize: '0.9rem' }}>(changing slug will create a new {postRouteCapitalized || 'post'})</span>}
             </label>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.5rem',
-              marginBottom: '0.5rem',
-              padding: '0.5rem',
-              background: '#f5f5f5',
-              borderRadius: '4px',
-              fontSize: '0.9rem',
-              color: '#666'
-            }}>
-              <span style={{ fontWeight: '500' }}>{postRouteCapitalized || 'Post'} Route Prefix:</span>
-              <span style={{ 
-                background: 'white', 
-                padding: '0.25rem 0.5rem', 
-                borderRadius: '4px',
-                fontFamily: 'monospace'
-              }}>
-                {postRoute ? `/${postRoute}/` : '(root)'}
-              </span>
-            </div>
             <input
               type="text"
               value={slug}
@@ -731,9 +710,6 @@ function SettingsEditor({ config, onClose }: { config: SiteConfig; onClose: () =
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-              Post Route Prefix
-            </label>
             <input
               type="text"
               value={postRoute}

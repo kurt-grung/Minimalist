@@ -10,11 +10,11 @@ import {
   deletePage,
   type Post,
   type Page,
-} from '../content'
-import * as storage from '../storage'
+} from '../src/lib/content'
+import * as storage from '../src/lib/storage'
 
 // Mock storage module
-vi.mock('../storage', () => ({
+vi.mock('../src/lib/storage', () => ({
   storageGet: vi.fn(),
   storageSet: vi.fn(),
   storageDelete: vi.fn(),
@@ -329,4 +329,5 @@ describe('content', () => {
     })
   })
 })
+
 

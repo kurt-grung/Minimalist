@@ -11,9 +11,11 @@ function getAuthToken(request: NextRequest): string | null {
 }
 
 // GET /api/posts - Get all posts
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const posts = await getAllPosts()
+    const { searchParams } = new URL(request.url)
+    const locale = searchParams.get('locale') || undefined
+    const posts = await getAllPosts(locale || undefined)
     return NextResponse.json(posts)
   } catch (error) {
     return NextResponse.json(
@@ -43,6 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await request.json()
+    const locale = data.locale || undefined
     
     // Generate ID if not provided
     const id = data.id || `post-${Date.now()}`
@@ -57,7 +60,7 @@ export async function POST(request: NextRequest) {
       author: data.author || ''
     }
 
-    const saved = await savePost(post)
+    const saved = await savePost(post, locale)
     if (!saved) {
       return NextResponse.json(
         { error: 'Failed to save post' },

@@ -13,11 +13,11 @@ export interface Page {
     slug: string;
     content: string;
 }
-export declare function getAllPosts(): Promise<Post[]>;
-export declare function getPostBySlug(slug: string): Promise<Post | null>;
-export declare function savePost(post: Post): Promise<boolean>;
-export declare function deletePost(slug: string): Promise<boolean>;
-export declare function getAllPages(): Promise<Page[]>;
-export declare function getPageBySlug(slug: string): Promise<Page | null>;
-export declare function savePage(page: Page): Promise<boolean>;
-export declare function deletePage(slug: string): Promise<boolean>;
+export declare function getAllPosts(locale?: string): Promise<Post[]>;
+export declare function getPostBySlug(slug: string, locale?: string): Promise<Post | null>;
+export declare function savePost(post: Post, locale?: string): Promise<boolean>;
+export declare function deletePost(slug: string, locale?: string): Promise<boolean>;
+export declare function getAllPages(locale?: string): Promise<Page[]>;
+export declare function getPageBySlug(slug: string, locale?: string): Promise<Page | null>;
+export declare function savePage(page: Page, locale?: string): Promise<boolean>;
+export declare function deletePage(slug: string, locale?: string): Promise<boolean>;

@@ -4,11 +4,22 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+// Force dynamic rendering - this page uses browser-only APIs
+export const dynamic = 'force-dynamic'
+
+interface Locale {
+  code: string
+  name: string
+  enabled: boolean
+}
+
 interface SiteConfig {
   siteTitle: string
   siteSubtitle: string
   postRoute: string
   pageRoute: string
+  defaultLocale: string
+  locales: Locale[]
 }
 
 export default function SettingsPage() {
@@ -16,10 +27,21 @@ export default function SettingsPage() {
   const [siteSubtitle, setSiteSubtitle] = useState('')
   const [postRoute, setPostRoute] = useState('')
   const [pageRoute, setPageRoute] = useState('')
+  const [defaultLocale, setDefaultLocale] = useState('en')
+  const [locales, setLocales] = useState<Locale[]>([{ code: 'en', name: 'English', enabled: true }])
+  const [newLocaleCode, setNewLocaleCode] = useState('')
+  const [newLocaleName, setNewLocaleName] = useState('')
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [isLocalhost, setIsLocalhost] = useState(false)
-  const [config, setConfig] = useState<SiteConfig>({ siteTitle: 'My Blog', siteSubtitle: 'Welcome to our simple file-based CMS', postRoute: 'posts', pageRoute: '' })
+  const [config, setConfig] = useState<SiteConfig>({ 
+    siteTitle: 'My Blog', 
+    siteSubtitle: 'Welcome to our simple file-based CMS', 
+    postRoute: 'posts', 
+    pageRoute: '',
+    defaultLocale: 'en',
+    locales: [{ code: 'en', name: 'English', enabled: true }]
+  })
   const router = useRouter()
 
   useEffect(() => {
@@ -59,6 +81,8 @@ export default function SettingsPage() {
         // Use nullish coalescing to preserve empty strings (empty string means root route)
         setPostRoute(data.postRoute ?? 'posts')
         setPageRoute(data.pageRoute ?? '')
+        setDefaultLocale(data.defaultLocale ?? 'en')
+        setLocales(data.locales ?? [{ code: 'en', name: 'English', enabled: true }])
       }
     } catch (err) {
       console.error('Failed to load settings:', err)
@@ -83,7 +107,9 @@ export default function SettingsPage() {
           siteTitle: siteTitle.trim(),
           siteSubtitle: siteSubtitle.trim(),
           postRoute: postRoute.trim(),
-          pageRoute: pageRoute.trim()
+          pageRoute: pageRoute.trim(),
+          defaultLocale: defaultLocale,
+          locales: locales
         })
       })
 
@@ -98,6 +124,43 @@ export default function SettingsPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const addLocale = () => {
+    if (!newLocaleCode.trim() || !newLocaleName.trim()) {
+      alert('Please enter both locale code and name')
+      return
+    }
+    const code = newLocaleCode.trim().toLowerCase()
+    if (locales.some(l => l.code === code)) {
+      alert('Locale with this code already exists')
+      return
+    }
+    setLocales([...locales, { code, name: newLocaleName.trim(), enabled: true }])
+    setNewLocaleCode('')
+    setNewLocaleName('')
+  }
+
+  const removeLocale = (code: string) => {
+    if (code === defaultLocale) {
+      alert('Cannot remove the default locale. Please set another locale as default first.')
+      return
+    }
+    if (locales.length === 1) {
+      alert('Cannot remove the last locale')
+      return
+    }
+    setLocales(locales.filter(l => l.code !== code))
+  }
+
+  const toggleLocale = (code: string) => {
+    if (code === defaultLocale && locales.find(l => l.code === code)?.enabled) {
+      alert('Cannot disable the default locale. Please set another locale as default first.')
+      return
+    }
+    setLocales(locales.map(l => 
+      l.code === code ? { ...l, enabled: !l.enabled } : l
+    ))
   }
 
   // Don't render if not on localhost
@@ -188,9 +251,6 @@ export default function SettingsPage() {
         </div>
 
         <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-            Post Route Prefix
-          </label>
           <input
             type="text"
             value={postRoute}
@@ -239,6 +299,160 @@ export default function SettingsPage() {
               ⚠️ Changing this will update all page URLs. Existing links will need to be updated.
             </p>
           )}
+        </div>
+
+        <div style={{ 
+          marginBottom: '1.5rem', 
+          padding: '1.5rem', 
+          background: '#f9f9f9', 
+          borderRadius: '8px',
+          border: '1px solid #e0e0e0'
+        }}>
+          <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', fontWeight: '600' }}>
+            Multi-Language Support
+          </h2>
+          
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              Default Locale
+            </label>
+            <select
+              value={defaultLocale}
+              onChange={(e) => setDefaultLocale(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                background: 'white'
+              }}
+            >
+              {locales.filter(l => l.enabled).map(locale => (
+                <option key={locale.code} value={locale.code}>
+                  {locale.name} ({locale.code})
+                </option>
+              ))}
+            </select>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
+              The default language for your site
+            </p>
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              Available Locales
+            </label>
+            <div style={{ marginBottom: '1rem' }}>
+              {locales.map(locale => (
+                <div 
+                  key={locale.code}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem',
+                    marginBottom: '0.5rem',
+                    background: 'white',
+                    borderRadius: '6px',
+                    border: locale.code === defaultLocale ? '2px solid #0070f3' : '1px solid #ddd'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={locale.enabled}
+                      onChange={() => toggleLocale(locale.code)}
+                      disabled={locale.code === defaultLocale}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                    <span style={{ fontWeight: locale.code === defaultLocale ? '600' : '400' }}>
+                      {locale.name} ({locale.code})
+                      {locale.code === defaultLocale && (
+                        <span style={{ marginLeft: '0.5rem', color: '#0070f3', fontSize: '0.85rem' }}>
+                          [Default]
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeLocale(locale.code)}
+                    disabled={locale.code === defaultLocale || locales.length === 1}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      background: locale.code === defaultLocale || locales.length === 1 ? '#f0f0f0' : '#dc3545',
+                      color: locale.code === defaultLocale || locales.length === 1 ? '#999' : 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: locale.code === defaultLocale || locales.length === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ 
+            padding: '1rem', 
+            background: 'white', 
+            borderRadius: '6px',
+            border: '1px dashed #ddd'
+          }}>
+            <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', fontWeight: '500' }}>
+              Add New Locale
+            </h3>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <input
+                type="text"
+                value={newLocaleCode}
+                onChange={(e) => setNewLocaleCode(e.target.value)}
+                placeholder="Code (e.g., es, fr, de)"
+                style={{
+                  flex: '1',
+                  padding: '0.5rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '0.9rem'
+                }}
+                maxLength={5}
+              />
+              <input
+                type="text"
+                value={newLocaleName}
+                onChange={(e) => setNewLocaleName(e.target.value)}
+                placeholder="Name (e.g., Spanish, French)"
+                style={{
+                  flex: '2',
+                  padding: '0.5rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '0.9rem'
+                }}
+              />
+              <button
+                type="button"
+                onClick={addLocale}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: '#0070f3',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem'
+                }}
+              >
+                Add
+              </button>
+            </div>
+            <p style={{ fontSize: '0.8rem', color: '#666', margin: 0 }}>
+              Locale code should be 2-5 characters (e.g., "en", "es", "fr", "zh-CN")
+            </p>
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
