@@ -63,6 +63,26 @@ export async function GET() {
             description: 'Update site configuration',
             auth: true
           }
+        },
+        images: {
+          list: {
+            method: 'GET',
+            path: '/api/images',
+            description: 'Get all uploaded images',
+            auth: false
+          },
+          upload: {
+            method: 'POST',
+            path: '/api/images',
+            description: 'Upload a new image',
+            auth: true
+          },
+          delete: {
+            method: 'DELETE',
+            path: '/api/images/[filename]',
+            description: 'Delete an image by filename',
+            auth: true
+          }
         }
       },
       config: {

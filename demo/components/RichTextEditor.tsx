@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { highlightCodeBlocks } from './syntaxHighlighter'
+import ImageSelector from './ImageSelector'
 
 interface RichTextEditorProps {
   content: string
@@ -13,6 +14,7 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
   const editorRef = useRef<HTMLDivElement>(null)
   const [isMarkdownMode, setIsMarkdownMode] = useState(false)
   const [markdownContent, setMarkdownContent] = useState('')
+  const [showImageSelector, setShowImageSelector] = useState(false)
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,
@@ -217,6 +219,38 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
     handleContentChange()
   }
 
+  const insertImage = (url: string) => {
+    if (isMarkdownMode) {
+      // Insert markdown image syntax
+      const alt = window.prompt('Enter alt text (optional):') || ''
+      const markdownImage = `![${alt}](${url})`
+      const textarea = document.querySelector('textarea') as HTMLTextAreaElement
+      if (textarea) {
+        const start = textarea.selectionStart || 0
+        const end = textarea.selectionEnd || start
+        const currentContent = markdownContent
+        const newContent = currentContent.slice(0, start) + markdownImage + currentContent.slice(end)
+        handleMarkdownChange(newContent)
+        // Restore cursor position after content update
+        setTimeout(() => {
+          if (textarea) {
+            const newPos = start + markdownImage.length
+            textarea.setSelectionRange(newPos, newPos)
+            textarea.focus()
+          }
+        }, 0)
+      } else {
+        // Fallback if textarea not found
+        handleMarkdownChange(markdownContent + markdownImage)
+      }
+    } else {
+      // Insert HTML image
+      const alt = window.prompt('Enter alt text (optional):') || ''
+      document.execCommand('insertHTML', false, `<img src="${url}" alt="${alt}" style="max-width: 100%; height: auto;" />`)
+      handleContentChange()
+    }
+  }
+
   // Decode HTML entities that browser encodes in innerHTML
   const decodeHtmlEntities = (html: string): string => {
     if (!html) return html
@@ -312,6 +346,11 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
           const href = el.getAttribute('href') || ''
           const linkText = children || href
           return `[${linkText}](${href})`
+        }
+        case 'img': {
+          const src = el.getAttribute('src') || ''
+          const alt = el.getAttribute('alt') || ''
+          return `![${alt}](${src})`
         }
         case 'br': return '\n'
         case 'div': return children + (inList ? '' : '\n')
@@ -433,6 +472,12 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
         continue
       }
       
+      // Images (markdown syntax: ![alt](url))
+      if (line.match(/!\[.*?\]\(.*?\)/)) {
+        blocks.push(line)
+        continue
+      }
+      
       // Regular paragraph
       if (line.trim() !== '') {
         blocks.push(`<p>${line}</p>`)
@@ -456,6 +501,9 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
     let html = blocks.join('')
     
     // Process inline formatting (must be done after block-level processing)
+    // Images (must come before links to avoid conflicts)
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto;" />')
+    
     // Inline code (avoid matching code blocks)
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
     
@@ -688,6 +736,16 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
             >
               🔗
             </button>
+
+            {/* Image */}
+            <button
+              type="button"
+              onClick={() => setShowImageSelector(true)}
+              className="p-2 mr-2 pr-3 border-r border-gray-300 rounded border border-gray-300 cursor-pointer text-sm bg-white text-gray-800 hover:bg-gray-100 transition-colors"
+              title="Insert Image"
+            >
+              🖼️
+            </button>
           </>
         )}
 
@@ -782,6 +840,13 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
           margin: 0.5rem 0;
         }
       `}</style>
+
+      {/* Image Selector Modal */}
+      <ImageSelector
+        isOpen={showImageSelector}
+        onClose={() => setShowImageSelector(false)}
+        onSelect={insertImage}
+      />
     </div>
   )
 }

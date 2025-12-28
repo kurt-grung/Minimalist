@@ -1,4 +1,5 @@
 import { storageGet, storageSet, storageDelete, storageList, storageExists } from './storage'
+import { parseFrontmatter, stringifyFrontmatter, Frontmatter } from './frontmatter'
 
 export interface Post {
   id: string
@@ -26,8 +27,8 @@ export async function getAllPosts(locale?: string): Promise<Post[]> {
       // Get posts for specific locale
       const keys = await storageList(`content/posts/${locale}/`)
       for (const key of keys) {
-        if (key.endsWith('.json')) {
-          const slug = key.replace('.json', '')
+        if (key.endsWith('.json') || key.endsWith('.md')) {
+          const slug = key.replace(/\.(json|md)$/, '')
           const post = await getPostBySlug(slug, locale)
           if (post) {
             posts.push(post)
@@ -38,9 +39,9 @@ export async function getAllPosts(locale?: string): Promise<Post[]> {
       // Get all posts from all locales (legacy support)
       const keys = await storageList('content/posts/')
       for (const key of keys) {
-        if (key.endsWith('.json') && !key.includes('/')) {
-          // Legacy format: content/posts/slug.json
-          const slug = key.replace('.json', '')
+        if ((key.endsWith('.json') || key.endsWith('.md')) && !key.includes('/')) {
+          // Legacy format: content/posts/slug.json or slug.md
+          const slug = key.replace(/\.(json|md)$/, '')
           const post = await getPostBySlug(slug)
           if (post) {
             posts.push(post)
@@ -80,21 +81,53 @@ function fixDoubleEncodedEntities(html: string): string {
 export async function getPostBySlug(slug: string, locale?: string): Promise<Post | null> {
   try {
     let content: string | null = null
+    let isMarkdown = false
     
     if (locale) {
-      // Try locale-specific path first
-      content = await storageGet(`content/posts/${locale}/${slug}.json`)
+      // Try markdown first, then JSON
+      content = await storageGet(`content/posts/${locale}/${slug}.md`)
+      if (content) {
+        isMarkdown = true
+      } else {
+        content = await storageGet(`content/posts/${locale}/${slug}.json`)
+      }
     }
     
     // Fallback to legacy format if locale-specific not found
     if (!content) {
-      content = await storageGet(`content/posts/${slug}.json`)
+      content = await storageGet(`content/posts/${slug}.md`)
+      if (content) {
+        isMarkdown = true
+      } else {
+        content = await storageGet(`content/posts/${slug}.json`)
+      }
     }
     
     if (!content) {
       return null
     }
-    const post = JSON.parse(content) as Post
+    
+    let post: Post
+    
+    if (isMarkdown) {
+      // Parse markdown with frontmatter
+      const { frontmatter, content: markdownContent } = parseFrontmatter(content)
+      
+      // Convert frontmatter to Post object
+      post = {
+        id: frontmatter.id || `post-${Date.now()}`,
+        title: frontmatter.title || '',
+        slug: frontmatter.slug || slug,
+        content: markdownContent.trim(),
+        excerpt: frontmatter.excerpt,
+        date: frontmatter.date || new Date().toISOString(),
+        author: frontmatter.author
+      }
+    } else {
+      // Parse JSON
+      post = JSON.parse(content) as Post
+    }
+    
     // Fix any double-encoded entities in the post content
     if (post.content) {
       post.content = fixDoubleEncodedEntities(post.content)
@@ -110,14 +143,37 @@ export async function getPostBySlug(slug: string, locale?: string): Promise<Post
 }
 
 // Save post
-export async function savePost(post: Post, locale?: string): Promise<boolean> {
+// Default format is JSON. Set useMarkdown=true to save as Markdown with frontmatter.
+export async function savePost(post: Post, locale?: string, useMarkdown: boolean = false): Promise<boolean> {
   try {
-    const content = JSON.stringify(post, null, 2)
+    let content: string
+    let extension: string
+    
+    if (useMarkdown) {
+      // Create frontmatter from post metadata
+      const frontmatter: Frontmatter = {
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+        date: post.date,
+      }
+      if (post.excerpt) frontmatter.excerpt = post.excerpt
+      if (post.author) frontmatter.author = post.author
+      
+      // Stringify with frontmatter
+      content = stringifyFrontmatter(frontmatter, post.content)
+      extension = '.md'
+    } else {
+      // Use JSON format
+      content = JSON.stringify(post, null, 2)
+      extension = '.json'
+    }
+    
     if (locale) {
-      return await storageSet(`content/posts/${locale}/${post.slug}.json`, content)
+      return await storageSet(`content/posts/${locale}/${post.slug}${extension}`, content)
     } else {
       // Legacy format
-      return await storageSet(`content/posts/${post.slug}.json`, content)
+      return await storageSet(`content/posts/${post.slug}${extension}`, content)
     }
   } catch (error) {
     console.error('Error saving post:', error)
@@ -128,12 +184,19 @@ export async function savePost(post: Post, locale?: string): Promise<boolean> {
 // Delete post
 export async function deletePost(slug: string, locale?: string): Promise<boolean> {
   try {
+    let deleted = false
+    
     if (locale) {
-      return await storageDelete(`content/posts/${locale}/${slug}.json`)
+      // Try both markdown and JSON
+      deleted = await storageDelete(`content/posts/${locale}/${slug}.md`) || 
+                await storageDelete(`content/posts/${locale}/${slug}.json`)
     } else {
-      // Try legacy format
-      return await storageDelete(`content/posts/${slug}.json`)
+      // Try legacy format (both markdown and JSON)
+      deleted = await storageDelete(`content/posts/${slug}.md`) || 
+                await storageDelete(`content/posts/${slug}.json`)
     }
+    
+    return deleted
   } catch (error) {
     console.error('Error deleting post:', error)
     return false

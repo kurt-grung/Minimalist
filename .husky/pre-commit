@@ -1,0 +1,42 @@
+#!/usr/bin/env sh
+echo "🔍 Running pre-commit checks..."
+
+# Run tests for CMS package
+echo "🧪 Running CMS package tests..."
+npm run test:cms || {
+  echo "❌ CMS package tests failed. Please fix the errors before committing."
+  exit 1
+}
+
+# Run tests for demo app
+echo "🧪 Running demo app tests..."
+npm run test:demo || {
+  echo "❌ Demo app tests failed. Please fix the errors before committing."
+  exit 1
+}
+
+# Type check demo app
+echo "🔍 Running TypeScript type check for demo app..."
+cd demo && npx tsc --noEmit || {
+  echo "❌ TypeScript errors found in demo app. Please fix the errors before committing."
+  exit 1
+}
+cd ..
+
+# Build check (CMS package)
+echo "🔨 Running CMS package build check..."
+npm run build:package || {
+  echo "❌ CMS package build failed. Please fix the errors before committing."
+  exit 1
+}
+
+# Build check (Demo app - this will catch TypeScript errors)
+echo "🔨 Running demo app build check..."
+cd demo && npm run build || {
+  echo "❌ Demo app build failed. Please fix the errors before committing."
+  exit 1
+}
+cd ..
+
+echo "✅ All pre-commit checks passed!"
+

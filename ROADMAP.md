@@ -6,7 +6,7 @@ This document outlines the planned features, improvements, and enhancements for 
 
 - ✅ Admin panel with authentication
 - ✅ Create, edit, and delete posts
-- ✅ File-based content storage (JSON)
+- ✅ File-based content storage (JSON and Markdown)
 - ✅ Static site generation
 - ✅ Settings management (site title, subtitle, route prefixes, locales)
 - ✅ Sitemap generation with multi-locale support
@@ -15,6 +15,9 @@ This document outlines the planned features, improvements, and enhancements for 
 - ✅ Rich text editor with WYSIWYG and Markdown modes
 - ✅ Locale-based routing and content management
 - ✅ API routes with locale support
+- ✅ Image management - Upload, media library, and editor integration
+- ✅ Responsive grid layout with image previews
+- ✅ Full-text search - Search API, results page, and admin panel integration
 
 ---
 
@@ -32,25 +35,27 @@ This document outlines the planned features, improvements, and enhancements for 
 
 **Status:** ✅ Complete - Built with zero external dependencies
 
-#### 1.2 Markdown Support ✅ PARTIALLY COMPLETE
+#### 1.2 Markdown Support ✅ COMPLETE
 - [x] Markdown parsing and rendering in editor
 - [x] Markdown mode toggle in editor
 - [x] HTML to Markdown conversion
 - [x] Markdown to HTML conversion
-- [ ] Support for frontmatter in markdown files
-- [ ] Migration tool: JSON → Markdown
+- [x] Support for frontmatter in markdown files
+- [x] Migration tool: JSON → Markdown
 
-**Status:** ✅ Core markdown support complete - Editor supports markdown mode with bidirectional conversion
+**Status:** ✅ Complete - Full markdown support with frontmatter parsing and migration tool
 
-#### 1.3 Image Management
-- [ ] Image upload functionality
-- [ ] Image storage in `/content/images/` or `/public/images/`
-- [ ] Media library in admin panel
+#### 1.3 Image Management ✅ COMPLETE
+- [x] Image upload functionality
+- [x] Image storage in `/public/images/`
+- [x] Media library in admin panel
 - [ ] Image optimization (resize, compress)
-- [ ] Image gallery/selector in editor
-- [ ] Support for external image URLs
+- [x] Image gallery/selector in editor
+- [x] Support for external image URLs
 
-**Estimated effort:** 3-4 days
+**Status:** ✅ Complete - Full image management with upload, media library, and editor integration. Image optimization is optional enhancement.
+
+**Estimated effort:** 3-4 days (Completed)
 
 #### 1.4 SEO Enhancements
 - [ ] Meta title and description per post/page
@@ -103,14 +108,16 @@ This document outlines the planned features, improvements, and enhancements for 
 
 ### Priority: Medium
 
-#### 3.1 Search Functionality
-- [ ] Full-text search on frontend
-- [ ] Search API endpoint
-- [ ] Search results page
-- [ ] Search in admin panel
-- [ ] Search highlighting
+#### 3.1 Search Functionality ✅ COMPLETE
+- [x] Full-text search on frontend
+- [x] Search API endpoint
+- [x] Search results page
+- [x] Search in admin panel
+- [x] Search highlighting
 
-**Estimated effort:** 2-3 days
+**Status:** ✅ Complete - Full-text search with relevance ranking, highlighting, and multi-locale support
+
+**Estimated effort:** 2-3 days (Completed)
 
 #### 3.2 RSS Feed
 - [ ] RSS feed generation (`/feed.xml`)
@@ -131,14 +138,19 @@ This document outlines the planned features, improvements, and enhancements for 
 #### 3.4 UI/UX Improvements
 - [x] Confirmation dialogs (ConfirmModal component)
 - [x] Error modals with user-friendly messages
+- [x] Responsive grid layout for posts
+- [x] Image previews in post cards
+- [x] Uniform card sizes with consistent text positioning
+- [x] Full background images with gradient overlays
+- [x] White background fallback for cards without images
+- [x] Adaptive text colors (white on images, dark on white backgrounds)
 - [ ] Better loading states
 - [ ] Error boundaries
 - [ ] Toast notifications (success/error messages)
 - [ ] Keyboard shortcuts in admin
-- [ ] Responsive design improvements
 - [ ] Dark mode support
 
-**Status:** ✅ Partially complete - Confirmation dialogs and error handling implemented
+**Status:** ✅ Partially complete - Confirmation dialogs, error handling, responsive grid, image previews, and modern card design with uniform sizing implemented
 
 ---
 
@@ -299,6 +311,11 @@ This document outlines the planned features, improvements, and enhancements for 
 
 ## Quick Wins (Can be done anytime)
 
+- [x] Responsive grid layout for posts
+- [x] Image previews in post cards
+- [x] Uniform card sizes with consistent text positioning
+- [x] Full background images with gradient overlays
+- [x] White background fallback for cards without images
 - [ ] Add loading skeletons
 - [ ] Improve error messages
 - [ ] Add keyboard navigation
@@ -336,13 +353,26 @@ If you'd like to contribute to any of these features:
 ## Version History
 
 - **v1.0.0** - Basic CMS functionality
-- **v1.1.0** (Current) - Rich text editor, markdown support, multi-locale support
-- **v1.2.0** (Planned) - Image management, SEO enhancements
+- **v1.1.0** - Rich text editor, markdown support, multi-locale support
+- **v1.2.0** - Image management, responsive grid layout, image previews
+- **v1.3.0** - Full-text search functionality
+- **v1.4.0** (Current) - Modern card design with uniform sizing, full background images, and gradient overlays
+- **v1.5.0** (Planned) - SEO enhancements
 - **v2.0.0** (Planned) - Categories, tags, draft workflow
-- **v2.1.0** (Planned) - Search, RSS, pagination
+- **v2.1.0** (Planned) - RSS feed, pagination
 - **v3.0.0** (Planned) - Multi-user, OAuth, production features
 
 ---
 
 *Last updated: January 2025*
+
+## Recent Updates
+
+### v1.4.0 - Modern Card Design (January 2025)
+- ✅ Uniform card sizes (280px height) for consistent layout
+- ✅ Full background images covering entire card area
+- ✅ Light gradient overlay for text readability on images
+- ✅ White background fallback when no image is present
+- ✅ Adaptive text colors (white on images, dark on white backgrounds)
+- ✅ Consistent text positioning at bottom of all cards
 

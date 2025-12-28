@@ -43,6 +43,8 @@ export default function AdminDashboard() {
   const [config, setConfig] = useState<SiteConfig>({ siteTitle: 'My Blog', siteSubtitle: 'Welcome to our simple file-based CMS', postRoute: 'posts', pageRoute: '', defaultLocale: 'en', locales: [] })
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; slug: string | null; locale?: string }>({ isOpen: false, slug: null })
   const [errorModal, setErrorModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' })
+  const [searchQuery, setSearchQuery] = useState('')
+  const [allPosts, setAllPosts] = useState<Post[]>([])
   const router = useRouter()
 
   useEffect(() => {
@@ -123,7 +125,13 @@ export default function AdminDashboard() {
       const response = await fetch(`/api/posts?locale=${localeToUse}`)
       if (response.ok) {
         const data = await response.json()
-        setPosts(data)
+        setAllPosts(data)
+        // Apply search filter if there's a query
+        if (searchQuery.trim()) {
+          filterPosts(data, searchQuery)
+        } else {
+          setPosts(data)
+        }
       } else {
         console.error('Failed to load posts:', response.status, response.statusText)
       }
@@ -133,6 +141,33 @@ export default function AdminDashboard() {
       setLoading(false)
     }
   }
+
+  const filterPosts = (postsToFilter: Post[], query: string) => {
+    if (!query.trim()) {
+      setPosts(postsToFilter)
+      return
+    }
+
+    const queryLower = query.toLowerCase()
+    const filtered = postsToFilter.filter(post => {
+      const titleMatch = post.title.toLowerCase().includes(queryLower)
+      const slugMatch = post.slug.toLowerCase().includes(queryLower)
+      const excerptMatch = post.excerpt?.toLowerCase().includes(queryLower)
+      const contentMatch = post.content?.toLowerCase().includes(queryLower)
+      
+      return titleMatch || slugMatch || excerptMatch || contentMatch
+    })
+    
+    setPosts(filtered)
+  }
+
+  // Filter posts when search query changes
+  useEffect(() => {
+    if (allPosts.length > 0) {
+      filterPosts(allPosts, searchQuery)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, allPosts.length])
 
   // Reload posts when locale changes (from state or URL) or config loads
   useEffect(() => {
@@ -232,6 +267,22 @@ export default function AdminDashboard() {
             Settings
           </Link>
           <Link
+            href="/admin/dashboard/media"
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#9c27b0',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              display: 'inline-block'
+            }}
+          >
+            Media Library
+          </Link>
+          <Link
             href="/admin/dashboard/new"
             style={{
               padding: '0.75rem 1.5rem',
@@ -296,6 +347,43 @@ export default function AdminDashboard() {
           </div>
         </div>
         
+        <div style={{ marginBottom: '1.5rem' }}>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search posts by title, slug, or content..."
+            style={{
+              width: '100%',
+              maxWidth: '500px',
+              padding: '0.75rem 1rem',
+              fontSize: '1rem',
+              border: '2px solid #ddd',
+              borderRadius: '8px',
+              outline: 'none'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#0070f3'}
+            onBlur={(e) => e.target.style.borderColor = '#ddd'}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              style={{
+                marginLeft: '0.5rem',
+                padding: '0.75rem 1rem',
+                fontSize: '0.9rem',
+                backgroundColor: '#666',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        
         {posts.length === 0 ? (
           <div style={{ 
             padding: '2rem', 
@@ -304,7 +392,11 @@ export default function AdminDashboard() {
             textAlign: 'center',
             color: '#666'
           }}>
-            <p>No posts yet. Create your first post!</p>
+            <p>
+              {searchQuery 
+                ? `No posts found matching "${searchQuery}"` 
+                : 'No posts yet. Create your first post!'}
+            </p>
           </div>
         ) : (
           <div style={{ display: 'grid', gap: '1rem' }}>

@@ -9,6 +9,7 @@ exports.getPageBySlug = getPageBySlug;
 exports.savePage = savePage;
 exports.deletePage = deletePage;
 const storage_1 = require("./storage");
+const frontmatter_1 = require("./frontmatter");
 // Get all posts
 async function getAllPosts(locale) {
     try {
@@ -17,8 +18,8 @@ async function getAllPosts(locale) {
             // Get posts for specific locale
             const keys = await (0, storage_1.storageList)(`content/posts/${locale}/`);
             for (const key of keys) {
-                if (key.endsWith('.json')) {
-                    const slug = key.replace('.json', '');
+                if (key.endsWith('.json') || key.endsWith('.md')) {
+                    const slug = key.replace(/\.(json|md)$/, '');
                     const post = await getPostBySlug(slug, locale);
                     if (post) {
                         posts.push(post);
@@ -30,9 +31,9 @@ async function getAllPosts(locale) {
             // Get all posts from all locales (legacy support)
             const keys = await (0, storage_1.storageList)('content/posts/');
             for (const key of keys) {
-                if (key.endsWith('.json') && !key.includes('/')) {
-                    // Legacy format: content/posts/slug.json
-                    const slug = key.replace('.json', '');
+                if ((key.endsWith('.json') || key.endsWith('.md')) && !key.includes('/')) {
+                    // Legacy format: content/posts/slug.json or slug.md
+                    const slug = key.replace(/\.(json|md)$/, '');
                     const post = await getPostBySlug(slug);
                     if (post) {
                         posts.push(post);
@@ -51,18 +52,50 @@ async function getAllPosts(locale) {
 async function getPostBySlug(slug, locale) {
     try {
         let content = null;
+        let isMarkdown = false;
         if (locale) {
-            // Try locale-specific path first
-            content = await (0, storage_1.storageGet)(`content/posts/${locale}/${slug}.json`);
+            // Try markdown first, then JSON
+            content = await (0, storage_1.storageGet)(`content/posts/${locale}/${slug}.md`);
+            if (content) {
+                isMarkdown = true;
+            }
+            else {
+                content = await (0, storage_1.storageGet)(`content/posts/${locale}/${slug}.json`);
+            }
         }
         // Fallback to legacy format if locale-specific not found
         if (!content) {
-            content = await (0, storage_1.storageGet)(`content/posts/${slug}.json`);
+            content = await (0, storage_1.storageGet)(`content/posts/${slug}.md`);
+            if (content) {
+                isMarkdown = true;
+            }
+            else {
+                content = await (0, storage_1.storageGet)(`content/posts/${slug}.json`);
+            }
         }
         if (!content) {
             return null;
         }
-        return JSON.parse(content);
+        let post;
+        if (isMarkdown) {
+            // Parse markdown with frontmatter
+            const { frontmatter, content: markdownContent } = (0, frontmatter_1.parseFrontmatter)(content);
+            // Convert frontmatter to Post object
+            post = {
+                id: frontmatter.id || `post-${Date.now()}`,
+                title: frontmatter.title || '',
+                slug: frontmatter.slug || slug,
+                content: markdownContent.trim(),
+                excerpt: frontmatter.excerpt,
+                date: frontmatter.date || new Date().toISOString(),
+                author: frontmatter.author
+            };
+        }
+        else {
+            // Parse JSON
+            post = JSON.parse(content);
+        }
+        return post;
     }
     catch (error) {
         console.error('Error getting post:', error);
@@ -70,15 +103,38 @@ async function getPostBySlug(slug, locale) {
     }
 }
 // Save post
-async function savePost(post, locale) {
+// Default format is JSON. Set useMarkdown=true to save as Markdown with frontmatter.
+async function savePost(post, locale, useMarkdown = false) {
     try {
-        const content = JSON.stringify(post, null, 2);
+        let content;
+        let extension;
+        if (useMarkdown) {
+            // Create frontmatter from post metadata
+            const frontmatter = {
+                id: post.id,
+                title: post.title,
+                slug: post.slug,
+                date: post.date,
+            };
+            if (post.excerpt)
+                frontmatter.excerpt = post.excerpt;
+            if (post.author)
+                frontmatter.author = post.author;
+            // Stringify with frontmatter
+            content = (0, frontmatter_1.stringifyFrontmatter)(frontmatter, post.content);
+            extension = '.md';
+        }
+        else {
+            // Use JSON format
+            content = JSON.stringify(post, null, 2);
+            extension = '.json';
+        }
         if (locale) {
-            return await (0, storage_1.storageSet)(`content/posts/${locale}/${post.slug}.json`, content);
+            return await (0, storage_1.storageSet)(`content/posts/${locale}/${post.slug}${extension}`, content);
         }
         else {
             // Legacy format
-            return await (0, storage_1.storageSet)(`content/posts/${post.slug}.json`, content);
+            return await (0, storage_1.storageSet)(`content/posts/${post.slug}${extension}`, content);
         }
     }
     catch (error) {
@@ -89,13 +145,18 @@ async function savePost(post, locale) {
 // Delete post
 async function deletePost(slug, locale) {
     try {
+        let deleted = false;
         if (locale) {
-            return await (0, storage_1.storageDelete)(`content/posts/${locale}/${slug}.json`);
+            // Try both markdown and JSON
+            deleted = await (0, storage_1.storageDelete)(`content/posts/${locale}/${slug}.md`) ||
+                await (0, storage_1.storageDelete)(`content/posts/${locale}/${slug}.json`);
         }
         else {
-            // Try legacy format
-            return await (0, storage_1.storageDelete)(`content/posts/${slug}.json`);
+            // Try legacy format (both markdown and JSON)
+            deleted = await (0, storage_1.storageDelete)(`content/posts/${slug}.md`) ||
+                await (0, storage_1.storageDelete)(`content/posts/${slug}.json`);
         }
+        return deleted;
     }
     catch (error) {
         console.error('Error deleting post:', error);

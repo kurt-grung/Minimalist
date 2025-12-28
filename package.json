@@ -9,12 +9,20 @@
   ],
   "scripts": {
     "build": "npm run build:package && npm run install:demo",
+    "build:all": "npm run build:package && npm run install:demo && npm run build:demo",
     "build:package": "cd cms && npm install && npm run build",
+    "build:demo": "cd demo && npm install && npm run build",
     "install:demo": "cd demo && npm install",
     "dev": "cd demo && npm run dev",
     "dev:demo": "cd demo && npm run dev",
-    "test": "npm install --workspace=cms && npm test --workspace=cms",
+    "test": "npm install --workspace=cms && npm test --workspace=cms && npm install --workspace=demo && npm test --workspace=demo",
+    "test:cms": "npm install --workspace=cms && npm test --workspace=cms",
+    "test:demo": "npm install --workspace=demo && npm test --workspace=demo",
     "test:watch": "npm install --workspace=cms && npm run test:watch --workspace=cms",
-    "test:coverage": "npm install --workspace=cms && npm run test:coverage --workspace=cms"
+    "test:coverage": "npm install --workspace=cms && npm run test:coverage --workspace=cms",
+    "prepare": "node .husky/install.mjs"
+  },
+  "devDependencies": {
+    "husky": "^9.0.0"
   }
 }

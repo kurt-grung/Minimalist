@@ -47,10 +47,14 @@ describe('content', () => {
         const post3: Post = { ...mockPost, slug: 'post3', date: '2024-01-03' }
 
         mockStorage.storageList.mockResolvedValue(['post1.json', 'post2.json', 'post3.json'])
+        // For each post, try .md first (returns null), then .json
         mockStorage.storageGet
-          .mockResolvedValueOnce(JSON.stringify(post1))
-          .mockResolvedValueOnce(JSON.stringify(post2))
-          .mockResolvedValueOnce(JSON.stringify(post3))
+          .mockResolvedValueOnce(null) // post1.md
+          .mockResolvedValueOnce(JSON.stringify(post1)) // post1.json
+          .mockResolvedValueOnce(null) // post2.md
+          .mockResolvedValueOnce(JSON.stringify(post2)) // post2.json
+          .mockResolvedValueOnce(null) // post3.md
+          .mockResolvedValueOnce(JSON.stringify(post3)) // post3.json
 
         const result = await getAllPosts()
 
@@ -61,16 +65,24 @@ describe('content', () => {
         expect(mockStorage.storageList).toHaveBeenCalledWith('content/posts/')
       })
 
-      it('should filter out non-JSON files', async () => {
-        mockStorage.storageList.mockResolvedValue(['post1.json', 'post2.txt', 'post3.json'])
+      it('should filter out non-JSON and non-MD files', async () => {
+        mockStorage.storageList.mockResolvedValue(['post1.json', 'post2.txt', 'post3.json', 'post4.md'])
         mockStorage.storageGet
           .mockResolvedValueOnce(JSON.stringify(mockPost))
           .mockResolvedValueOnce(JSON.stringify(mockPost))
+          .mockResolvedValueOnce(`---
+id: post-4
+title: Markdown Post
+slug: post4
+date: 2024-01-01
+---
+
+Content`)
 
         const result = await getAllPosts()
 
-        expect(result).toHaveLength(2)
-        expect(mockStorage.storageGet).toHaveBeenCalledTimes(2)
+        expect(result).toHaveLength(3)
+        expect(mockStorage.storageGet).toHaveBeenCalledTimes(3)
       })
 
       it('should return empty array if no posts exist', async () => {
@@ -93,25 +105,57 @@ describe('content', () => {
 
       it('should skip posts that fail to load', async () => {
         mockStorage.storageList.mockResolvedValue(['post1.json', 'post2.json', 'post3.json'])
+        // For each post, try .md first (returns null), then .json
         mockStorage.storageGet
-          .mockResolvedValueOnce(JSON.stringify(mockPost))
-          .mockResolvedValueOnce(null) // post2 fails to load
-          .mockResolvedValueOnce(JSON.stringify(mockPost))
+          .mockResolvedValueOnce(null) // post1.md
+          .mockResolvedValueOnce(JSON.stringify(mockPost)) // post1.json
+          .mockResolvedValueOnce(null) // post2.md
+          .mockResolvedValueOnce(null) // post2.json fails to load
+          .mockResolvedValueOnce(null) // post3.md
+          .mockResolvedValueOnce(JSON.stringify(mockPost)) // post3.json
 
         const result = await getAllPosts()
 
-        expect(result).toHaveLength(2)
+        expect(result).toHaveLength(2) // post2 fails to load, so only post1 and post3 are returned
       })
     })
 
     describe('getPostBySlug', () => {
-      it('should return post if found', async () => {
-        mockStorage.storageGet.mockResolvedValue(JSON.stringify(mockPost))
+      it('should return post if found (JSON)', async () => {
+        // Try .md first (returns null), then .json
+        mockStorage.storageGet
+          .mockResolvedValueOnce(null) // test-post.md
+          .mockResolvedValueOnce(JSON.stringify(mockPost)) // test-post.json
 
         const result = await getPostBySlug('test-post')
 
         expect(result).toEqual(mockPost)
+        expect(mockStorage.storageGet).toHaveBeenCalledWith('content/posts/test-post.md')
         expect(mockStorage.storageGet).toHaveBeenCalledWith('content/posts/test-post.json')
+      })
+
+      it('should return post if found (Markdown)', async () => {
+        const markdownPost = `---
+id: post-123
+title: Test Post
+slug: test-post
+date: 2024-01-01
+excerpt: Test excerpt
+author: Test Author
+---
+
+This is a test post`
+        
+        // Try .md first, which should return the markdown content
+        mockStorage.storageGet.mockResolvedValueOnce(markdownPost)
+
+        const result = await getPostBySlug('test-post')
+
+        expect(result).toBeTruthy()
+        expect(result?.id).toBe('post-123')
+        expect(result?.title).toBe('Test Post')
+        expect(result?.content.trim()).toBe('This is a test post')
+        expect(mockStorage.storageGet).toHaveBeenCalledWith('content/posts/test-post.md')
       })
 
       it('should return null if post does not exist', async () => {
@@ -134,7 +178,7 @@ describe('content', () => {
     })
 
     describe('savePost', () => {
-      it('should save post successfully', async () => {
+      it('should save post successfully as JSON (default)', async () => {
         mockStorage.storageSet.mockResolvedValue(true)
 
         const result = await savePost(mockPost)
@@ -144,6 +188,21 @@ describe('content', () => {
           'content/posts/test-post.json',
           JSON.stringify(mockPost, null, 2),
         )
+      })
+
+      it('should save post as Markdown when useMarkdown=true', async () => {
+        mockStorage.storageSet.mockResolvedValue(true)
+
+        const result = await savePost(mockPost, undefined, true)
+
+        expect(result).toBe(true)
+        const callArgs = mockStorage.storageSet.mock.calls[0]
+        expect(callArgs[0]).toBe('content/posts/test-post.md')
+        expect(callArgs[1]).toContain('---')
+        expect(callArgs[1]).toContain('id: 1')
+        expect(callArgs[1]).toContain('title: Test Post')
+        expect(callArgs[1]).toContain('slug: test-post')
+        expect(callArgs[1]).toContain('date: 2024-01-01')
       })
 
       it('should return false on save error', async () => {
@@ -167,11 +226,15 @@ describe('content', () => {
 
     describe('deletePost', () => {
       it('should delete post successfully', async () => {
-        mockStorage.storageDelete.mockResolvedValue(true)
+        // Try .md first (returns false), then .json (returns true)
+        mockStorage.storageDelete
+          .mockResolvedValueOnce(false) // test-post.md doesn't exist
+          .mockResolvedValueOnce(true) // test-post.json exists and deleted
 
         const result = await deletePost('test-post')
 
         expect(result).toBe(true)
+        expect(mockStorage.storageDelete).toHaveBeenCalledWith('content/posts/test-post.md')
         expect(mockStorage.storageDelete).toHaveBeenCalledWith('content/posts/test-post.json')
       })
 

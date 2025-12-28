@@ -4,6 +4,27 @@ import { getConfig } from '@/lib/config'
 import Footer from '@/components/Footer'
 import LocaleSelector from '@/components/LocaleSelector'
 import SafeHtml from '@/components/SafeHtml'
+import PostImagePreview from '@/components/PostImagePreview'
+import SearchBar from '@/components/SearchBar'
+
+// Extract first image URL from HTML or Markdown content
+function extractFirstImage(content: string): string | null {
+  if (!content) return null
+  
+  // Try HTML img tag first
+  const htmlImgMatch = content.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i)
+  if (htmlImgMatch) {
+    return htmlImgMatch[1]
+  }
+  
+  // Try Markdown image syntax: ![alt](url)
+  const markdownImgMatch = content.match(/!\[.*?\]\(([^)]+)\)/)
+  if (markdownImgMatch) {
+    return markdownImgMatch[1]
+  }
+  
+  return null
+}
 
 export default async function Home() {
   const config = getConfig()
@@ -30,6 +51,13 @@ export default async function Home() {
             defaultLocale={config.defaultLocale || 'en'}
           />
         </div>
+        <div style={{ marginTop: '1.5rem' }}>
+          <SearchBar 
+            locale={locale}
+            defaultLocale={config.defaultLocale || 'en'}
+            style={{ maxWidth: '600px' }}
+          />
+        </div>
       </header>
 
       <section>
@@ -46,38 +74,83 @@ export default async function Home() {
             <p>No posts yet. Create your first post in the admin panel!</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: '1.5rem' }}>
-            {posts.map((post) => (
-              <Link 
-                key={post.id} 
-                href={postRoute 
-                  ? (locale !== config.defaultLocale ? `/${locale}/${postRoute}/${post.slug}` : `/${postRoute}/${post.slug}`)
-                  : (locale !== config.defaultLocale ? `/${locale}/${post.slug}` : `/${post.slug}`)
-                }
-                className="post-card"
-                style={{
-                  display: 'block',
-                  padding: '2rem',
-                  background: 'white',
-                  borderRadius: '8px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  transition: 'transform 0.2s, box-shadow 0.2s'
-                }}
-              >
-                <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
-                  {post.title}
-                </h3>
-                {post.excerpt && (
-                  <SafeHtml 
-                    html={post.excerpt}
-                    style={{ color: '#666', marginBottom: '0.5rem' }}
+          <div 
+            className="posts-grid"
+            style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+              gap: '1.5rem'
+            }}
+          >
+            {posts.map((post) => {
+              const imageUrl = extractFirstImage(post.content || '')
+              return (
+                <Link 
+                  key={post.id} 
+                  href={postRoute 
+                    ? (locale !== config.defaultLocale ? `/${locale}/${postRoute}/${post.slug}` : `/${postRoute}/${post.slug}`)
+                    : (locale !== config.defaultLocale ? `/${locale}/${post.slug}` : `/${post.slug}`)
+                  }
+                  className="post-card"
+                  style={{
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: 0,
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    overflow: 'hidden',
+                    height: '280px'
+                  }}
+                >
+                  <PostImagePreview
+                    src={imageUrl || ''}
+                    alt={post.title}
+                    height={280}
                   />
-                )}
-                <time style={{ color: '#999', fontSize: '0.9rem' }}>
-                  {new Date(post.date).toLocaleDateString()}
-                </time>
-              </Link>
-            ))}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    padding: '0.75rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    background: imageUrl 
+                      ? 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)'
+                      : 'none'
+                  }}>
+                    <h3 style={{ 
+                      fontSize: '1.1rem', 
+                      marginBottom: '0.4rem',
+                      fontWeight: '600',
+                      lineHeight: '1.3',
+                      color: imageUrl ? 'white' : '#333'
+                    }}>
+                      {post.title}
+                    </h3>
+                    {post.excerpt && (
+                      <SafeHtml 
+                        html={post.excerpt}
+                        style={{ 
+                          color: imageUrl ? 'rgba(255,255,255,0.9)' : '#666', 
+                          marginBottom: '0.5rem',
+                          fontSize: '0.8rem',
+                          lineHeight: '1.4',
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical'
+                        }}
+                      />
+                    )}
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         )}
       </section>

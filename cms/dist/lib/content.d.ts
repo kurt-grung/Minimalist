@@ -15,7 +15,7 @@ export interface Page {
 }
 export declare function getAllPosts(locale?: string): Promise<Post[]>;
 export declare function getPostBySlug(slug: string, locale?: string): Promise<Post | null>;
-export declare function savePost(post: Post, locale?: string): Promise<boolean>;
+export declare function savePost(post: Post, locale?: string, useMarkdown?: boolean): Promise<boolean>;
 export declare function deletePost(slug: string, locale?: string): Promise<boolean>;
 export declare function getAllPages(locale?: string): Promise<Page[]>;
 export declare function getPageBySlug(slug: string, locale?: string): Promise<Page | null>;

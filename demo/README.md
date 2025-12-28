@@ -36,6 +36,7 @@ npm run dev
 - ✅ **Sitemap generation** - Automatic sitemap with locale support
 - ✅ **API routes** - RESTful API for content management
 - ✅ **Localhost-only admin** - Admin panel only accessible on localhost for security
+- ✅ **Modern card design** - Uniform card sizes with full background images, gradient overlays, and consistent text positioning
 
 ## Project Structure
 
