@@ -1,21 +1,26 @@
 # Minimalist CMS
 
-Minimal headless CMS. No database required. Content is stored as files.
+A minimal, file-based headless CMS for Next.js. No database required - content is stored as files (JSON or Markdown with frontmatter).
 
 ## Features
 
-- ✅ **File-based storage** - No database needed
-- ✅ **Multi-locale support** - Create content in multiple languages
-- ✅ **TypeScript support** - Full TypeScript definitions
-- ✅ **Vercel KV support** - Automatic fallback to Vercel KV in production
-- ✅ **JWT authentication** - Secure admin authentication
-- ✅ **Zero configuration** - Works out of the box
-- ✅ **Static site generation** - Perfect for Next.js static exports
-- ✅ **Rich text editor** - WYSIWYG editor with Markdown support
-- ✅ **Image management** - Upload, manage, and insert images in posts
+- ✅ **File-based storage** - No database needed, content stored as JSON or Markdown files
+- ✅ **Multi-locale support** - Full i18n implementation with locale-based routing and content management
+- ✅ **TypeScript support** - Complete TypeScript definitions and type safety
+- ✅ **Vercel KV support** - Automatic fallback to Vercel KV in production environments
+- ✅ **JWT authentication** - Secure admin authentication with session management
+- ✅ **Zero configuration** - Works out of the box with sensible defaults
+- ✅ **Static site generation** - Perfect for Next.js static exports and SSG
+- ✅ **Rich text editor** - Custom WYSIWYG editor with Markdown mode toggle (zero external dependencies)
+- ✅ **Image management** - Upload, media library, and seamless editor integration
 - ✅ **Responsive grid layout** - Beautiful post grid with uniform card sizes and full background images
-- ✅ **Full-text search** - Search across posts and pages with relevance ranking
+- ✅ **Full-text search** - Search across posts and pages with relevance ranking and highlighting
 - ✅ **Modern card design** - Uniform card sizes with consistent text positioning, gradient overlays, and white background fallback
+- ✅ **Markdown support** - Full Markdown parsing with frontmatter support and migration tools
+- ✅ **Content sanitization** - XSS protection with HTML sanitization
+- ✅ **Sitemap generation** - Automatic sitemap with multi-locale support
+- ✅ **Testing infrastructure** - Comprehensive unit tests with Vitest
+- ✅ **Pre-commit hooks** - Automated testing and build verification
 
 ## Project Structure
 
@@ -136,7 +141,10 @@ See [Demo Tests README](./demo/tests/README.md) for more details.
 - [Demo README](./demo/README.md) - Demo project guide
 - [Installation Guide](./demo/INSTALLATION.md) - Setup instructions
 - [Roadmap](./ROADMAP.md) - Planned features and enhancements
-- [Git Hooks](./.husky/README.md) - Pre-commit hook documentation
+- [Integration Guide](./docs/INTEGRATION.md) - Integration examples
+- [Markdown & Frontmatter](./docs/MARKDOWN_FRONTMATTER.md) - Markdown support documentation
+- [Vercel Deployment](./docs/VERCEL_DEPLOY.md) - Deployment guide for Vercel
+- [Package Structure](./docs/PACKAGE_STRUCTURE.md) - Package architecture overview
 
 ## Usage Example
 
@@ -172,6 +180,37 @@ results.forEach(result => {
   console.log(result.title, result.relevance)
 })
 ```
+
+## Architecture
+
+The project is organized as a monorepo with two main components:
+
+1. **`cms/`** - The NPM package containing the core CMS functionality
+   - File-based content storage
+   - Authentication utilities
+   - Content management APIs
+   - Next.js templates for quick setup
+
+2. **`demo/`** - Example/demo project showcasing the CMS
+   - Full-featured admin panel
+   - Multi-locale content management
+   - Rich text editor integration
+   - Image management system
+   - Search functionality
+
+## Tech Stack
+
+- **Framework:** Next.js 16+ (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS
+- **Testing:** Vitest
+- **Authentication:** JWT with bcryptjs
+- **Storage:** File-based (JSON/Markdown) with optional Vercel KV fallback
+- **Content Format:** JSON or Markdown with frontmatter
+
+## Contributing
+
+Contributions are welcome! Please check the [Roadmap](./ROADMAP.md) for planned features and open an issue before starting work on major changes.
 
 ## License
 

@@ -8,6 +8,8 @@ import ConfirmModal from '@/components/ConfirmModal'
 // Force dynamic rendering - this page uses browser-only APIs
 export const dynamic = 'force-dynamic'
 
+type PostStatus = 'draft' | 'published' | 'scheduled'
+
 interface Post {
   id: string
   title: string
@@ -16,6 +18,8 @@ interface Post {
   excerpt?: string
   date: string
   author?: string
+  status?: PostStatus
+  scheduledDate?: string
 }
 
 interface Locale {
@@ -45,6 +49,7 @@ export default function AdminDashboard() {
   const [errorModal, setErrorModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' })
   const [searchQuery, setSearchQuery] = useState('')
   const [allPosts, setAllPosts] = useState<Post[]>([])
+  const [statusFilter, setStatusFilter] = useState<PostStatus | 'all'>('all')
   const router = useRouter()
 
   useEffect(() => {
@@ -122,16 +127,12 @@ export default function AdminDashboard() {
   const loadPosts = async (selectedLocale?: string) => {
     try {
       const localeToUse = selectedLocale || locale || config.defaultLocale || 'en'
-      const response = await fetch(`/api/posts?locale=${localeToUse}`)
+      const response = await fetch(`/api/posts?locale=${localeToUse}&includeDrafts=true&includeScheduled=true`)
       if (response.ok) {
         const data = await response.json()
         setAllPosts(data)
-        // Apply search filter if there's a query
-        if (searchQuery.trim()) {
-          filterPosts(data, searchQuery)
-        } else {
-          setPosts(data)
-        }
+        // Apply filters
+        applyFilters(data, searchQuery, statusFilter)
       } else {
         console.error('Failed to load posts:', response.status, response.statusText)
       }
@@ -142,32 +143,40 @@ export default function AdminDashboard() {
     }
   }
 
-  const filterPosts = (postsToFilter: Post[], query: string) => {
-    if (!query.trim()) {
-      setPosts(postsToFilter)
-      return
+  const applyFilters = (postsToFilter: Post[], query: string, status: PostStatus | 'all') => {
+    let filtered = postsToFilter
+
+    // Apply status filter
+    if (status !== 'all') {
+      filtered = filtered.filter(post => {
+        const postStatus = post.status || 'published'
+        return postStatus === status
+      })
     }
 
-    const queryLower = query.toLowerCase()
-    const filtered = postsToFilter.filter(post => {
-      const titleMatch = post.title.toLowerCase().includes(queryLower)
-      const slugMatch = post.slug.toLowerCase().includes(queryLower)
-      const excerptMatch = post.excerpt?.toLowerCase().includes(queryLower)
-      const contentMatch = post.content?.toLowerCase().includes(queryLower)
-      
-      return titleMatch || slugMatch || excerptMatch || contentMatch
-    })
+    // Apply search filter
+    if (query.trim()) {
+      const queryLower = query.toLowerCase()
+      filtered = filtered.filter(post => {
+        const titleMatch = post.title.toLowerCase().includes(queryLower)
+        const slugMatch = post.slug.toLowerCase().includes(queryLower)
+        const excerptMatch = post.excerpt?.toLowerCase().includes(queryLower)
+        const contentMatch = post.content?.toLowerCase().includes(queryLower)
+        
+        return titleMatch || slugMatch || excerptMatch || contentMatch
+      })
+    }
     
     setPosts(filtered)
   }
 
-  // Filter posts when search query changes
+  // Apply filters when search query or status filter changes
   useEffect(() => {
     if (allPosts.length > 0) {
-      filterPosts(allPosts, searchQuery)
+      applyFilters(allPosts, searchQuery, statusFilter)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, allPosts.length])
+  }, [searchQuery, statusFilter, allPosts.length])
 
   // Reload posts when locale changes (from state or URL) or config loads
   useEffect(() => {
@@ -347,14 +356,15 @@ export default function AdminDashboard() {
           </div>
         </div>
         
-        <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search posts by title, slug, or content..."
             style={{
-              width: '100%',
+              flex: '1',
+              minWidth: '200px',
               maxWidth: '500px',
               padding: '0.75rem 1rem',
               fontSize: '1rem',
@@ -365,11 +375,30 @@ export default function AdminDashboard() {
             onFocus={(e) => e.target.style.borderColor = '#0070f3'}
             onBlur={(e) => e.target.style.borderColor = '#ddd'}
           />
-          {searchQuery && (
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as PostStatus | 'all')}
+            style={{
+              padding: '0.75rem 1rem',
+              fontSize: '1rem',
+              border: '2px solid #ddd',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="all">All Status</option>
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+            <option value="scheduled">Scheduled</option>
+          </select>
+          {(searchQuery || statusFilter !== 'all') && (
             <button
-              onClick={() => setSearchQuery('')}
+              onClick={() => {
+                setSearchQuery('')
+                setStatusFilter('all')
+              }}
               style={{
-                marginLeft: '0.5rem',
                 padding: '0.75rem 1rem',
                 fontSize: '0.9rem',
                 backgroundColor: '#666',
@@ -379,7 +408,7 @@ export default function AdminDashboard() {
                 cursor: 'pointer'
               }}
             >
-              Clear
+              Clear Filters
             </button>
           )}
         </div>
@@ -413,26 +442,85 @@ export default function AdminDashboard() {
                   alignItems: 'center'
                 }}
               >
-                <div>
-                  <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>
-                    {post.title}
-                  </h3>
-                  <p style={{ color: '#666', fontSize: '0.9rem' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <h3 style={{ fontSize: '1.2rem', margin: 0 }}>
+                      {post.title}
+                    </h3>
+                    {(() => {
+                      const status = post.status || 'published'
+                      const statusColors = {
+                        draft: { bg: '#ff9800', color: 'white' },
+                        published: { bg: '#28a745', color: 'white' },
+                        scheduled: { bg: '#0070f3', color: 'white' }
+                      }
+                      const colors = statusColors[status]
+                      return (
+                        <span
+                          style={{
+                            padding: '0.25rem 0.75rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            borderRadius: '12px',
+                            backgroundColor: colors.bg,
+                            color: colors.color,
+                            textTransform: 'uppercase'
+                          }}
+                        >
+                          {status}
+                        </span>
+                      )
+                    })()}
+                  </div>
+                  <p style={{ color: '#666', fontSize: '0.9rem', margin: 0 }}>
                     {post.slug} • {new Date(post.date).toLocaleDateString()}
+                    {post.status === 'scheduled' && post.scheduledDate && (
+                      <span style={{ marginLeft: '0.5rem', color: '#0070f3' }}>
+                        • Scheduled: {new Date(post.scheduledDate).toLocaleDateString()}
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <Link
-                    href={config.postRoute ? `/${config.postRoute}/${post.slug}` : `/${post.slug}`}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      background: '#f0f0f0',
-                      borderRadius: '6px',
-                      fontSize: '0.9rem'
-                    }}
-                  >
-                    View
-                  </Link>
+                  {(() => {
+                    const postStatus = post.status || 'published'
+                    const viewUrl = config.postRoute 
+                      ? `/${config.postRoute}/${post.slug}` 
+                      : `/${post.slug}`
+                    const previewUrl = postStatus === 'draft' 
+                      ? `${viewUrl}?preview=true`
+                      : viewUrl
+                    const linkText = postStatus === 'draft' ? 'Preview' : 'View'
+                    const linkStyle = postStatus === 'draft'
+                      ? {
+                          padding: '0.5rem 1rem',
+                          background: '#9c27b0',
+                          color: 'white',
+                          borderRadius: '6px',
+                          fontSize: '0.9rem',
+                          textDecoration: 'none',
+                          display: 'inline-block'
+                        }
+                      : {
+                          padding: '0.5rem 1rem',
+                          background: '#f0f0f0',
+                          borderRadius: '6px',
+                          fontSize: '0.9rem',
+                          textDecoration: 'none',
+                          display: 'inline-block',
+                          color: 'inherit'
+                        }
+                    
+                    return (
+                      <Link
+                        href={previewUrl}
+                        target={postStatus === 'draft' ? '_blank' : undefined}
+                        style={linkStyle}
+                      >
+                        {linkText}
+                      </Link>
+                    )
+                  })()}
                   <Link
                     href={`/admin/dashboard/edit/${encodeURIComponent(post.slug)}?locale=${locale || config.defaultLocale}`}
                     style={{

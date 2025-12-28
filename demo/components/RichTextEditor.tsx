@@ -12,6 +12,7 @@ interface RichTextEditorProps {
 
 export default function RichTextEditor({ content, onChange, placeholder = 'Start writing...' }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
+  const isInternalUpdateRef = useRef(false)
   const [isMarkdownMode, setIsMarkdownMode] = useState(false)
   const [markdownContent, setMarkdownContent] = useState('')
   const [showImageSelector, setShowImageSelector] = useState(false)
@@ -38,13 +39,84 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
       .replace(/&amp;#39;/g, '&#39;')
   }
 
-  // Initialize editor content
+  // Decode HTML entities that browser encodes in innerHTML
+  const decodeHtmlEntities = (html: string): string => {
+    if (!html) return html
+    const textarea = document.createElement('textarea')
+    textarea.innerHTML = html
+    return textarea.value
+  }
+
+  // Initialize editor content - only update when content changes externally
   useEffect(() => {
+    // Skip update if this change came from the editor itself
+    if (isInternalUpdateRef.current) {
+      isInternalUpdateRef.current = false
+      return
+    }
+    
     if (editorRef.current && !isMarkdownMode) {
       const decoded = decodeContentForEditor(content)
       const normalized = normalizeContent(decoded)
-      if (editorRef.current.innerHTML !== normalized) {
+      const currentHtml = editorRef.current.innerHTML
+      
+      // Only update if content actually changed (avoid unnecessary updates)
+      // Compare normalized versions to avoid false positives
+      const currentNormalized = normalizeContent(decodeHtmlEntities(currentHtml))
+      
+      if (currentNormalized !== normalized) {
+        // Save cursor position using text-based approach
+        const selection = window.getSelection()
+        let cursorPosition = 0
+        
+        if (selection && selection.rangeCount > 0 && editorRef.current.contains(selection.anchorNode)) {
+          const range = selection.getRangeAt(0)
+          const preCaretRange = range.cloneRange()
+          preCaretRange.selectNodeContents(editorRef.current)
+          preCaretRange.setEnd(range.startContainer, range.startOffset)
+          cursorPosition = preCaretRange.toString().length
+        }
+        
+        // Update HTML
         editorRef.current.innerHTML = normalized || ''
+        
+        // Restore cursor position using text offset
+        if (cursorPosition > 0 && selection) {
+          try {
+            const walker = document.createTreeWalker(
+              editorRef.current,
+              NodeFilter.SHOW_TEXT,
+              null
+            )
+            
+            let currentPos = 0
+            let targetNode: Node | null = null
+            let targetOffset = 0
+            
+            let node
+            while (node = walker.nextNode()) {
+              const nodeLength = node.textContent?.length || 0
+              if (currentPos + nodeLength >= cursorPosition) {
+                targetNode = node
+                targetOffset = cursorPosition - currentPos
+                break
+              }
+              currentPos += nodeLength
+            }
+            
+            if (targetNode) {
+              const newRange = document.createRange()
+              const maxOffset = targetNode.textContent?.length || 0
+              newRange.setStart(targetNode, Math.min(targetOffset, maxOffset))
+              newRange.setEnd(targetNode, Math.min(targetOffset, maxOffset))
+              selection.removeAllRanges()
+              selection.addRange(newRange)
+            }
+          } catch (e) {
+            // If restoration fails, just focus the editor
+            editorRef.current.focus()
+          }
+        }
       }
     }
   }, [content, isMarkdownMode])
@@ -251,19 +323,13 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
     }
   }
 
-  // Decode HTML entities that browser encodes in innerHTML
-  const decodeHtmlEntities = (html: string): string => {
-    if (!html) return html
-    const textarea = document.createElement('textarea')
-    textarea.innerHTML = html
-    return textarea.value
-  }
-
   const handleContentChange = () => {
     if (editorRef.current && !isMarkdownMode) {
       const html = editorRef.current.innerHTML
       // Decode entities that browser automatically encodes (like &nbsp; -> &amp;nbsp;)
       const decoded = decodeHtmlEntities(html)
+      // Mark that this is an internal update to prevent cursor jump
+      isInternalUpdateRef.current = true
       onChange(decoded)
     }
   }

@@ -4,20 +4,24 @@ This document outlines the planned features, improvements, and enhancements for 
 
 ## Current Status ✅ 
 
+### Core Features (Complete)
 - ✅ Admin panel with authentication
 - ✅ Create, edit, and delete posts
-- ✅ File-based content storage (JSON and Markdown)
+- ✅ File-based content storage (JSON and Markdown with frontmatter)
 - ✅ Static site generation
 - ✅ Settings management (site title, subtitle, route prefixes, locales)
 - ✅ Sitemap generation with multi-locale support
-- ✅ Basic authentication (JWT)
-- ✅ Multi-locale support (i18n) - Full implementation
-- ✅ Rich text editor with WYSIWYG and Markdown modes
+- ✅ JWT authentication with session management
+- ✅ Multi-locale support (i18n) - Full implementation with locale-based routing
+- ✅ Rich text editor with WYSIWYG and Markdown modes (zero dependencies)
 - ✅ Locale-based routing and content management
 - ✅ API routes with locale support
 - ✅ Image management - Upload, media library, and editor integration
 - ✅ Responsive grid layout with image previews
 - ✅ Full-text search - Search API, results page, and admin panel integration
+- ✅ Content sanitization - XSS protection with HTML sanitization
+- ✅ Testing infrastructure - Unit tests with Vitest
+- ✅ Pre-commit hooks - Automated testing and build verification
 
 ---
 
@@ -64,8 +68,11 @@ This document outlines the planned features, improvements, and enhancements for 
 - [ ] Structured data (JSON-LD)
 - [ ] Canonical URLs
 - [ ] Robots meta tags
+- [ ] Sitemap enhancements (priority, change frequency)
 
-**Estimated effort:** 2 days
+**Estimated effort:** 2-3 days
+
+**Priority:** High - Important for production sites
 
 ---
 
@@ -144,13 +151,16 @@ This document outlines the planned features, improvements, and enhancements for 
 - [x] Full background images with gradient overlays
 - [x] White background fallback for cards without images
 - [x] Adaptive text colors (white on images, dark on white backgrounds)
-- [ ] Better loading states
-- [ ] Error boundaries
+- [ ] Better loading states (skeletons, spinners)
+- [ ] Error boundaries (React error boundaries)
 - [ ] Toast notifications (success/error messages)
-- [ ] Keyboard shortcuts in admin
+- [ ] Keyboard shortcuts in admin (save, delete, etc.)
 - [ ] Dark mode support
+- [ ] Improved mobile experience for admin panel
 
-**Status:** ✅ Partially complete - Confirmation dialogs, error handling, responsive grid, image previews, and modern card design with uniform sizing implemented
+**Status:** ✅ Partially complete - Core UI components and card design implemented. Loading states, error boundaries, and notifications are next priorities.
+
+**Estimated effort:** 2-3 days
 
 ---
 
@@ -171,11 +181,15 @@ This document outlines the planned features, improvements, and enhancements for 
 #### 4.2 Content Validation ✅ PARTIALLY COMPLETE
 - [x] Content sanitization (SafeHtml component)
 - [x] XSS protection (HTML sanitization)
-- [ ] Schema validation for posts/pages
-- [ ] Slug uniqueness validation
+- [ ] Schema validation for posts/pages (Zod or similar)
+- [ ] Slug uniqueness validation (per locale)
 - [ ] Required field validation
+- [ ] Slug format validation (URL-safe characters)
+- [ ] Content length limits
 
-**Status:** ✅ Basic sanitization complete - HTML content is sanitized before rendering
+**Status:** ✅ Basic sanitization complete - HTML content is sanitized before rendering. Schema validation and field validation are next priorities.
+
+**Estimated effort:** 2-3 days
 
 #### 4.3 Backup & Export
 - [ ] Export all content as JSON
@@ -246,26 +260,37 @@ This document outlines the planned features, improvements, and enhancements for 
 
 ### Priority: Medium
 
-#### 6.1 Testing
-- [ ] Unit tests for content operations
+#### 6.1 Testing ✅ PARTIALLY COMPLETE
+- [x] Unit tests for content operations (CMS package)
+- [x] Unit tests for demo app (markdown, sanitize, search, etc.)
+- [x] Test coverage reporting (Vitest coverage)
 - [ ] Integration tests for API routes
-- [ ] E2E tests for admin workflows
-- [ ] Test coverage reporting
-- [ ] CI/CD integration
+- [ ] E2E tests for admin workflows (Playwright/Cypress)
+- [ ] CI/CD integration (GitHub Actions)
+- [ ] Visual regression testing
 
-**Estimated effort:** 5-7 days
+**Status:** ✅ Core unit testing complete - CMS package and demo app have comprehensive unit tests. Integration and E2E tests are next priorities.
+
+**Estimated effort:** 3-5 days (remaining work)
 
 #### 6.2 Documentation ✅ PARTIALLY COMPLETE
 - [x] API documentation (Package README)
 - [x] Installation guide
 - [x] Demo project documentation
 - [x] Multi-locale documentation
-- [ ] Deployment guides (Vercel guide exists in docs)
+- [x] Deployment guides (Vercel deployment guide)
+- [x] Integration guide
+- [x] Markdown and frontmatter documentation
+- [x] Package structure documentation
 - [ ] Customization examples
 - [ ] Theme development guide
 - [ ] Plugin/extension system docs
+- [ ] Video tutorials
+- [ ] API reference (auto-generated)
 
-**Status:** ✅ Core documentation complete - README files and installation guides added
+**Status:** ✅ Core documentation complete - Comprehensive guides for installation, integration, and deployment. Advanced customization docs are next.
+
+**Estimated effort:** 2-3 days (remaining work)
 
 #### 6.3 Developer Tools
 - [ ] CLI tools for content management
@@ -281,14 +306,18 @@ This document outlines the planned features, improvements, and enhancements for 
 
 ### Priority: Medium
 
-#### 7.1 Deployment Improvements
-- [ ] Vercel deployment guide
+#### 7.1 Deployment Improvements ✅ PARTIALLY COMPLETE
+- [x] Vercel deployment guide
+- [x] Vercel setup documentation
 - [ ] Netlify deployment guide
-- [ ] GitHub Actions workflows
+- [ ] GitHub Actions workflows (CI/CD)
 - [ ] Docker support
-- [ ] Environment variable management
+- [ ] Environment variable management guide
+- [ ] Multi-environment setup (dev/staging/prod)
 
-**Estimated effort:** 2-3 days
+**Status:** ✅ Vercel deployment complete - Comprehensive Vercel guides available. Other platforms and CI/CD are next priorities.
+
+**Estimated effort:** 2-3 days (remaining work)
 
 #### 7.2 Monitoring & Logging
 - [ ] Error tracking (Sentry)
@@ -356,10 +385,11 @@ If you'd like to contribute to any of these features:
 - **v1.1.0** - Rich text editor, markdown support, multi-locale support
 - **v1.2.0** - Image management, responsive grid layout, image previews
 - **v1.3.0** - Full-text search functionality
-- **v1.4.0** (Current) - Modern card design with uniform sizing, full background images, and gradient overlays
-- **v1.5.0** (Planned) - SEO enhancements
+- **v1.4.0** - Modern card design with uniform sizing, full background images, and gradient overlays
+- **v1.5.0** (Current) - Content sanitization, testing infrastructure, pre-commit hooks, comprehensive documentation
+- **v1.6.0** (Planned) - SEO enhancements, improved validation
 - **v2.0.0** (Planned) - Categories, tags, draft workflow
-- **v2.1.0** (Planned) - RSS feed, pagination
+- **v2.1.0** (Planned) - RSS feed, pagination, UI/UX improvements
 - **v3.0.0** (Planned) - Multi-user, OAuth, production features
 
 ---
@@ -367,6 +397,14 @@ If you'd like to contribute to any of these features:
 *Last updated: January 2025*
 
 ## Recent Updates
+
+### v1.5.0 - Testing & Documentation (January 2025)
+- ✅ Comprehensive unit test coverage for CMS package
+- ✅ Unit tests for demo app (markdown, sanitize, search, config, auth)
+- ✅ Pre-commit hooks with automated testing and build verification
+- ✅ Content sanitization with XSS protection (SafeHtml component)
+- ✅ Comprehensive documentation (integration, deployment, markdown support)
+- ✅ Improved project structure and organization
 
 ### v1.4.0 - Modern Card Design (January 2025)
 - ✅ Uniform card sizes (280px height) for consistent layout

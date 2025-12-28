@@ -15,7 +15,16 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const locale = searchParams.get('locale') || undefined
-    const posts = await getAllPosts(locale || undefined)
+    const includeDrafts = searchParams.get('includeDrafts') === 'true'
+    const includeScheduled = searchParams.get('includeScheduled') === 'true'
+    const preview = searchParams.get('preview') === 'true'
+    
+    // If preview mode, include drafts and scheduled posts
+    const posts = await getAllPosts(
+      locale || undefined,
+      includeDrafts || preview,
+      includeScheduled || preview
+    )
     return NextResponse.json(posts)
   } catch (error) {
     return NextResponse.json(
@@ -57,7 +66,9 @@ export async function POST(request: NextRequest) {
       content: data.content,
       excerpt: data.excerpt || '',
       date: data.date || new Date().toISOString(),
-      author: data.author || ''
+      author: data.author || '',
+      status: data.status || 'published',
+      scheduledDate: data.scheduledDate || undefined
     }
 
     const saved = await savePost(post, locale)

@@ -26,11 +26,24 @@ jobs:
       
       - name: Install dependencies
         working-directory: ./cms
-        run: npm install
+        run: |
+          # Clean install to fix optional dependency issue
+          rm -rf ../node_modules node_modules ../package-lock.json package-lock.json
+          npm install --include=optional
+      
+      - name: Fix rollup optional dependency
+        run: |
+          # Install rollup optional dependency at root where it's hoisted
+          npm install @rollup/rollup-linux-x64-gnu --save-optional --no-save --prefix . || true
       
       - name: Run tests
         working-directory: ./cms
         run: npm test
+        timeout-minutes: 5
+        continue-on-error: false
+        env:
+          NODE_ENV: test
+          CI: true
       
       - name: Generate coverage report
         working-directory: ./cms
@@ -69,7 +82,8 @@ jobs:
       
       - name: Install dependencies
         working-directory: ./cms
-        run: npm install
+        run: |
+          npm ci || (rm -rf node_modules package-lock.json && npm install --include=optional)
       
       - name: Build package
         working-directory: ./cms

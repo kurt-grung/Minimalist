@@ -9,6 +9,8 @@ import ConfirmModal from '@/components/ConfirmModal'
 // Force dynamic rendering - this page uses browser-only APIs
 export const dynamic = 'force-dynamic'
 
+type PostStatus = 'draft' | 'published' | 'scheduled'
+
 interface Post {
   id: string
   title: string
@@ -17,6 +19,8 @@ interface Post {
   excerpt?: string
   date: string
   author?: string
+  status?: PostStatus
+  scheduledDate?: string
 }
 
 interface Locale {
@@ -47,6 +51,8 @@ export default function EditPostPage() {
   const [content, setContent] = useState('')
   const [excerpt, setExcerpt] = useState('')
   const [author, setAuthor] = useState('')
+  const [status, setStatus] = useState<PostStatus>('published')
+  const [scheduledDate, setScheduledDate] = useState('')
   const [locale, setLocale] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -133,7 +139,8 @@ export default function EditPostPage() {
     }
     try {
       const localeToUse = postLocale || locale || config.defaultLocale
-      const response = await fetch(`/api/posts?locale=${localeToUse}`)
+      // Include drafts and scheduled posts for admin panel
+      const response = await fetch(`/api/posts?locale=${localeToUse}&includeDrafts=true&includeScheduled=true`)
       if (response.ok) {
         const posts: Post[] = await response.json()
         const foundPost = posts.find(p => p.slug === slug)
@@ -144,6 +151,19 @@ export default function EditPostPage() {
           setContent(foundPost.content)
           setExcerpt(foundPost.excerpt || '')
           setAuthor(foundPost.author || '')
+          setStatus(foundPost.status || 'published')
+          // Format scheduledDate for datetime-local input (YYYY-MM-DDTHH:mm)
+          if (foundPost.scheduledDate) {
+            const date = new Date(foundPost.scheduledDate)
+            const year = date.getFullYear()
+            const month = String(date.getMonth() + 1).padStart(2, '0')
+            const day = String(date.getDate()).padStart(2, '0')
+            const hours = String(date.getHours()).padStart(2, '0')
+            const minutes = String(date.getMinutes()).padStart(2, '0')
+            setScheduledDate(`${year}-${month}-${day}T${hours}:${minutes}`)
+          } else {
+            setScheduledDate('')
+          }
           // Set locale if not already set
           if (!locale && localeToUse) {
             setLocale(localeToUse)
@@ -165,6 +185,8 @@ export default function EditPostPage() {
           setContent('')
           setExcerpt('')
           setAuthor('')
+          setStatus('published')
+          setScheduledDate('')
           setLocale(localeToUse)
         }
       } else {
@@ -268,7 +290,9 @@ export default function EditPostPage() {
       postSlug !== post.slug ||
       content !== post.content ||
       excerpt !== (post.excerpt || '') ||
-      author !== (post.author || '')
+      author !== (post.author || '') ||
+      status !== (post.status || 'published') ||
+      scheduledDate !== (post.scheduledDate || '')
     ) : (title || content) // If no post, any content is a change
 
     if (!hasChanges) return
@@ -283,6 +307,8 @@ export default function EditPostPage() {
         content,
         excerpt,
         author,
+        status,
+        scheduledDate,
         date: post?.date || new Date().toISOString(),
         isDraft: true,
         originalSlug: post?.slug || slug
@@ -303,6 +329,8 @@ export default function EditPostPage() {
             content,
             excerpt,
             author,
+            status,
+            scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : undefined,
             date: post.date,
             locale: locale || config.defaultLocale
           })
@@ -345,6 +373,8 @@ export default function EditPostPage() {
             content,
             excerpt,
             author,
+            status,
+            scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : undefined,
             date: post.date,
             locale: currentLocale
           })
@@ -388,6 +418,8 @@ export default function EditPostPage() {
             content,
             excerpt,
             author,
+            status,
+            scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : undefined,
             date: post?.date || new Date().toISOString(),
             locale: currentLocale
           })
@@ -416,6 +448,8 @@ export default function EditPostPage() {
             content,
             excerpt,
             author,
+            status,
+            scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : undefined,
             date: post.date || new Date().toISOString(),
             locale: currentLocale
           })
@@ -588,6 +622,66 @@ export default function EditPostPage() {
           />
         </div>
 
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+            Status *
+          </label>
+          <select
+            value={status}
+            onChange={(e) => {
+              const newStatus = e.target.value as PostStatus
+              setStatus(newStatus)
+              // Clear scheduled date if not scheduled
+              if (newStatus !== 'scheduled') {
+                setScheduledDate('')
+              }
+            }}
+            required
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              fontSize: '1rem',
+              backgroundColor: 'white'
+            }}
+          >
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+            <option value="scheduled">Scheduled</option>
+          </select>
+          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
+            {status === 'draft' && 'Draft posts are not visible on the frontend unless previewed.'}
+            {status === 'published' && 'Published posts are immediately visible on the frontend.'}
+            {status === 'scheduled' && 'Scheduled posts will be published automatically on the scheduled date.'}
+          </p>
+        </div>
+
+        {status === 'scheduled' && (
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              Scheduled Date & Time *
+            </label>
+            <input
+              type="datetime-local"
+              value={scheduledDate}
+              onChange={(e) => setScheduledDate(e.target.value)}
+              required={status === 'scheduled'}
+              min={new Date().toISOString().slice(0, 16)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '1rem'
+              }}
+            />
+            <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
+              The post will be automatically published at this date and time.
+            </p>
+          </div>
+        )}
+
         <div style={{ marginBottom: '1.5rem' }}>
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
             Content *
@@ -599,7 +693,24 @@ export default function EditPostPage() {
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          {status === 'draft' && (
+            <Link
+              href={`${config.postRoute ? `/${config.postRoute}/${postSlug || slug}` : `/${postSlug || slug}`}?preview=true`}
+              target="_blank"
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: '#9c27b0',
+                color: 'white',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                textDecoration: 'none',
+                display: 'inline-block'
+              }}
+            >
+              Preview Draft
+            </Link>
+          )}
           <Link
             href="/admin/dashboard"
             style={{
@@ -617,7 +728,7 @@ export default function EditPostPage() {
           </Link>
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || (status === 'scheduled' && !scheduledDate)}
             style={{
               padding: '0.75rem 1.5rem',
               background: saving ? '#ccc' : '#0070f3',
@@ -625,7 +736,7 @@ export default function EditPostPage() {
               border: 'none',
               borderRadius: '6px',
               fontSize: '1rem',
-              cursor: saving ? 'not-allowed' : 'pointer'
+              cursor: saving || (status === 'scheduled' && !scheduledDate) ? 'not-allowed' : 'pointer'
             }}
           >
             {saving 

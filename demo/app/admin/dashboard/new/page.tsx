@@ -38,6 +38,8 @@ export default function NewPostPage() {
   const [content, setContent] = useState('')
   const [excerpt, setExcerpt] = useState('')
   const [author, setAuthor] = useState('')
+  const [status, setStatus] = useState<'draft' | 'published' | 'scheduled'>('published')
+  const [scheduledDate, setScheduledDate] = useState('')
   const [locale, setLocale] = useState<string>('')
   const [localeStates, setLocaleStates] = useState<Record<string, LocaleFormState>>({})
   const [saving, setSaving] = useState(false)
@@ -279,15 +281,17 @@ export default function NewPostPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          title,
-          slug: finalSlug,
-          content,
-          excerpt,
-          author,
-          date: new Date().toISOString(),
-          locale: locale || config.defaultLocale
-        })
+          body: JSON.stringify({
+            title,
+            slug: finalSlug,
+            content,
+            excerpt,
+            author,
+            status,
+            scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : undefined,
+            date: new Date().toISOString(),
+            locale: locale || config.defaultLocale
+          })
       })
 
       if (!response.ok) {
@@ -441,6 +445,66 @@ export default function NewPostPage() {
           />
         </div>
 
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+            Status *
+          </label>
+          <select
+            value={status}
+            onChange={(e) => {
+              const newStatus = e.target.value as 'draft' | 'published' | 'scheduled'
+              setStatus(newStatus)
+              // Clear scheduled date if not scheduled
+              if (newStatus !== 'scheduled') {
+                setScheduledDate('')
+              }
+            }}
+            required
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              fontSize: '1rem',
+              backgroundColor: 'white'
+            }}
+          >
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+            <option value="scheduled">Scheduled</option>
+          </select>
+          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
+            {status === 'draft' && 'Draft posts are not visible on the frontend unless previewed.'}
+            {status === 'published' && 'Published posts are immediately visible on the frontend.'}
+            {status === 'scheduled' && 'Scheduled posts will be published automatically on the scheduled date.'}
+          </p>
+        </div>
+
+        {status === 'scheduled' && (
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              Scheduled Date & Time *
+            </label>
+            <input
+              type="datetime-local"
+              value={scheduledDate}
+              onChange={(e) => setScheduledDate(e.target.value)}
+              required={status === 'scheduled'}
+              min={new Date().toISOString().slice(0, 16)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '1rem'
+              }}
+            />
+            <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
+              The post will be automatically published at this date and time.
+            </p>
+          </div>
+        )}
+
         <div style={{ marginBottom: '1.5rem' }}>
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
             Content *
@@ -468,9 +532,26 @@ export default function NewPostPage() {
           >
             Cancel
           </Link>
+          {status === 'draft' && slug && (
+            <Link
+              href={`${config.postRoute ? `/${config.postRoute}/${slug}` : `/${slug}`}?preview=true`}
+              target="_blank"
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: '#9c27b0',
+                color: 'white',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                textDecoration: 'none',
+                display: 'inline-block'
+              }}
+            >
+              Preview Draft
+            </Link>
+          )}
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || (status === 'scheduled' && !scheduledDate)}
             style={{
               padding: '0.75rem 1.5rem',
               background: saving ? '#ccc' : '#0070f3',
@@ -478,7 +559,7 @@ export default function NewPostPage() {
               border: 'none',
               borderRadius: '6px',
               fontSize: '1rem',
-              cursor: saving ? 'not-allowed' : 'pointer'
+              cursor: saving || (status === 'scheduled' && !scheduledDate) ? 'not-allowed' : 'pointer'
             }}
           >
             {saving ? 'Saving...' : `Save ${postRouteCapitalized || 'Post'}`}

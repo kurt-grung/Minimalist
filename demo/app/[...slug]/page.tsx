@@ -16,7 +16,7 @@ export async function generateStaticParams() {
   const postRoute = config.postRoute !== undefined && config.postRoute !== null ? config.postRoute : 'posts'
   
   for (const locale of enabledLocales) {
-    const posts = await getAllPosts(locale.code)
+    const posts = await getAllPosts(locale.code, false, false) // Only published posts
     posts.forEach((post) => {
       // Format: [locale, postRoute?, slug] or [locale, slug]
       if (postRoute) {
@@ -75,12 +75,13 @@ export async function generateStaticParams() {
   return params
 }
 
-// Helper function to find content across locales
+  // Helper function to find content across locales
 async function findContentBySlug(
   slug: string,
   type: 'post' | 'page',
   config: ReturnType<typeof getConfig>,
-  preferredLocale?: string
+  preferredLocale?: string,
+  preview: boolean = false
 ): Promise<{ content: Post | Page | null; locale: string | null }> {
   const enabledLocales = config.locales?.filter(l => l.enabled) || []
   const defaultLocale = config.defaultLocale || 'en'
@@ -94,7 +95,22 @@ async function findContentBySlug(
       content = await getPageBySlug(slug, preferredLocale)
     }
     if (content) {
-      return { content, locale: preferredLocale }
+      // For posts, check status unless preview mode
+      if (type === 'post' && !preview) {
+        const post = content as Post
+        const status = post.status || 'published'
+        if (status === 'draft') {
+          content = null // Don't show drafts unless preview
+        } else if (status === 'scheduled') {
+          const scheduledDate = post.scheduledDate || post.date
+          if (new Date(scheduledDate) > new Date()) {
+            content = null // Don't show scheduled posts before their date
+          }
+        }
+      }
+      if (content) {
+        return { content, locale: preferredLocale }
+      }
     }
   }
   
@@ -106,7 +122,22 @@ async function findContentBySlug(
     content = await getPageBySlug(slug, defaultLocale)
   }
   if (content) {
-    return { content, locale: defaultLocale }
+    // For posts, check status unless preview mode
+    if (type === 'post' && !preview) {
+      const post = content as Post
+      const status = post.status || 'published'
+      if (status === 'draft') {
+        content = null
+      } else if (status === 'scheduled') {
+        const scheduledDate = post.scheduledDate || post.date
+        if (new Date(scheduledDate) > new Date()) {
+          content = null
+        }
+      }
+    }
+    if (content) {
+      return { content, locale: defaultLocale }
+    }
   }
   
   // Try other enabled locales
@@ -119,7 +150,22 @@ async function findContentBySlug(
       content = await getPageBySlug(slug, locale.code)
     }
     if (content) {
-      return { content, locale: locale.code }
+      // For posts, check status unless preview mode
+      if (type === 'post' && !preview) {
+        const post = content as Post
+        const status = post.status || 'published'
+        if (status === 'draft') {
+          content = null
+        } else if (status === 'scheduled') {
+          const scheduledDate = post.scheduledDate || post.date
+          if (new Date(scheduledDate) > new Date()) {
+            content = null
+          }
+        }
+      }
+      if (content) {
+        return { content, locale: locale.code }
+      }
     }
   }
   
@@ -130,13 +176,29 @@ async function findContentBySlug(
     content = await getPageBySlug(slug)
   }
   
+  // For posts, check status unless preview mode
+  if (content && type === 'post' && !preview) {
+    const post = content as Post
+    const status = post.status || 'published'
+    if (status === 'draft') {
+      content = null
+    } else if (status === 'scheduled') {
+      const scheduledDate = post.scheduledDate || post.date
+      if (new Date(scheduledDate) > new Date()) {
+        content = null
+      }
+    }
+  }
+  
   return { content, locale: null }
 }
 
 export default async function DynamicContentPage({ 
-  params
+  params,
+  searchParams
 }: { 
   params: Promise<{ slug: string[] }>
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const config = getConfig()
   const postRoute = config.postRoute !== undefined && config.postRoute !== null ? config.postRoute : 'posts'
@@ -145,6 +207,8 @@ export default async function DynamicContentPage({
   
   // Await params in Next.js 16
   const resolvedParams = await params
+  const resolvedSearchParams = searchParams ? await searchParams : {}
+  const preview = resolvedSearchParams.preview === 'true'
   
   // Handle array of slugs
   const slugArray = Array.isArray(resolvedParams.slug) ? resolvedParams.slug : [resolvedParams.slug]
@@ -164,7 +228,7 @@ export default async function DynamicContentPage({
     // If after removing locale, array is empty, this is a locale-only path (homepage for that locale)
     if (slugArray.length === 0) {
       const locale = detectedLocale
-      const posts = await getAllPosts(locale)
+      const posts = await getAllPosts(locale, false, false) // Only published posts
       const postRoute = config.postRoute !== undefined && config.postRoute !== null ? config.postRoute : 'posts'
       const siteTitle = config.siteTitle || 'My Blog'
       const siteSubtitle = config.siteSubtitle || 'Welcome to our simple file-based CMS'
@@ -250,7 +314,7 @@ export default async function DynamicContentPage({
     
     // Check configured post route (only if postRoute is not empty)
     if (postRoute && route === postRoute) {
-      const result = await findContentBySlug(slug, 'post', config, detectedLocale || undefined)
+      const result = await findContentBySlug(slug, 'post', config, detectedLocale || undefined, preview)
       if (result.content) {
         content = result.content as Post
         contentType = 'post'
@@ -272,7 +336,7 @@ export default async function DynamicContentPage({
     
     // Backward compatibility: also check if it's the old "posts" route
     if (!content && route === 'posts' && postRoute !== 'posts' && postRoute !== '') {
-      const result = await findContentBySlug(slug, 'post', config, detectedLocale || undefined)
+      const result = await findContentBySlug(slug, 'post', config, detectedLocale || undefined, preview)
       if (result.content) {
         content = result.content as Post
         contentType = 'post'
@@ -286,7 +350,7 @@ export default async function DynamicContentPage({
     
     // First check if postRoute is empty - if so, this could be a post
     if (!postRoute) {
-      const result = await findContentBySlug(slug, 'post', config, detectedLocale || undefined)
+      const result = await findContentBySlug(slug, 'post', config, detectedLocale || undefined, preview)
       if (result.content) {
         content = result.content as Post
         contentType = 'post'
@@ -314,10 +378,24 @@ export default async function DynamicContentPage({
   // Render post
   if (contentType === 'post' && content) {
     const post = content as Post
+    const postStatus = post.status || 'published'
     const displayLocale = foundLocale || detectedLocale || config.defaultLocale || 'en'
     const homeUrl = displayLocale !== config.defaultLocale ? `/${displayLocale}` : '/'
     return (
       <main style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
+        {postStatus === 'scheduled' && post.scheduledDate && new Date(post.scheduledDate) > new Date() && (
+          <div style={{
+            background: '#0070f3',
+            color: 'white',
+            padding: '1rem',
+            borderRadius: '8px',
+            marginBottom: '2rem',
+            textAlign: 'center',
+            fontWeight: '600'
+          }}>
+            📅 SCHEDULED - This post will be published on {new Date(post.scheduledDate).toLocaleString()}
+          </div>
+        )}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <Link 
             href={homeUrl}

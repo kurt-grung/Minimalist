@@ -1,6 +1,8 @@
 import { storageGet, storageSet, storageDelete, storageList, storageExists } from './storage'
 import { parseFrontmatter, stringifyFrontmatter, Frontmatter } from './frontmatter'
 
+export type PostStatus = 'draft' | 'published' | 'scheduled'
+
 export interface Post {
   id: string
   title: string
@@ -9,6 +11,8 @@ export interface Post {
   excerpt?: string
   date: string
   author?: string
+  status?: PostStatus
+  scheduledDate?: string
 }
 
 export interface Page {
@@ -19,9 +23,12 @@ export interface Page {
 }
 
 // Get all posts
-export async function getAllPosts(locale?: string): Promise<Post[]> {
+// includeDrafts: if true, includes draft posts (for admin panel)
+// includeScheduled: if true, includes scheduled posts regardless of date (for admin panel)
+export async function getAllPosts(locale?: string, includeDrafts: boolean = false, includeScheduled: boolean = false): Promise<Post[]> {
   try {
     const posts: Post[] = []
+    const now = new Date()
     
     if (locale) {
       // Get posts for specific locale
@@ -51,11 +58,44 @@ export async function getAllPosts(locale?: string): Promise<Post[]> {
     }
     
     // Fix double-encoded entities in all posts
-    return posts.map(post => ({
+    let filteredPosts = posts.map(post => ({
       ...post,
       content: post.content ? fixDoubleEncodedEntities(post.content) : post.content,
-      excerpt: post.excerpt ? fixDoubleEncodedEntities(post.excerpt) : post.excerpt
-    })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      excerpt: post.excerpt ? fixDoubleEncodedEntities(post.excerpt) : post.excerpt,
+      // Set default status to 'published' for backward compatibility
+      status: post.status || 'published'
+    }))
+    
+    // Filter by status if not including drafts
+    if (!includeDrafts) {
+      filteredPosts = filteredPosts.filter(post => {
+        const status = post.status || 'published'
+        
+        // Always include published posts
+        if (status === 'published') {
+          return true
+        }
+        
+        // Include scheduled posts only if date has passed (unless includeScheduled is true)
+        if (status === 'scheduled') {
+          if (includeScheduled) {
+            return true
+          }
+          const scheduledDate = post.scheduledDate || post.date
+          return new Date(scheduledDate) <= now
+        }
+        
+        // Exclude drafts
+        return false
+      })
+    }
+    
+    return filteredPosts.sort((a, b) => {
+      // Sort by scheduledDate if scheduled, otherwise by date
+      const dateA = a.status === 'scheduled' && a.scheduledDate ? new Date(a.scheduledDate) : new Date(a.date)
+      const dateB = b.status === 'scheduled' && b.scheduledDate ? new Date(b.scheduledDate) : new Date(b.date)
+      return dateB.getTime() - dateA.getTime()
+    })
   } catch (error) {
     console.error('Error getting all posts:', error)
     return []
@@ -121,11 +161,17 @@ export async function getPostBySlug(slug: string, locale?: string): Promise<Post
         content: markdownContent.trim(),
         excerpt: frontmatter.excerpt,
         date: frontmatter.date || new Date().toISOString(),
-        author: frontmatter.author
+        author: frontmatter.author,
+        status: frontmatter.status || 'published',
+        scheduledDate: frontmatter.scheduledDate
       }
     } else {
       // Parse JSON
       post = JSON.parse(content) as Post
+      // Set default status for backward compatibility
+      if (!post.status) {
+        post.status = 'published'
+      }
     }
     
     // Fix any double-encoded entities in the post content
@@ -159,6 +205,8 @@ export async function savePost(post: Post, locale?: string, useMarkdown: boolean
       }
       if (post.excerpt) frontmatter.excerpt = post.excerpt
       if (post.author) frontmatter.author = post.author
+      if (post.status) frontmatter.status = post.status
+      if (post.scheduledDate) frontmatter.scheduledDate = post.scheduledDate
       
       // Stringify with frontmatter
       content = stringifyFrontmatter(frontmatter, post.content)

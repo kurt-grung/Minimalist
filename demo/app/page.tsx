@@ -28,9 +28,9 @@ function extractFirstImage(content: string): string | null {
 
 export default async function Home() {
   const config = getConfig()
-  // Load posts from default locale for homepage
+  // Load posts from default locale for homepage (only published posts)
   const locale = config.defaultLocale || 'en'
-  const posts = await getAllPosts(locale)
+  const posts = await getAllPosts(locale, false, false)
   const postRoute = config.postRoute !== undefined && config.postRoute !== null ? config.postRoute : 'posts'
   const siteTitle = config.siteTitle || 'My Blog'
   const siteSubtitle = config.siteSubtitle || 'Welcome to our simple file-based CMS'

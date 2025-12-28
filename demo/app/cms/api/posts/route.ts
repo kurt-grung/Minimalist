@@ -54,7 +54,9 @@ export async function POST(request: NextRequest) {
       content: data.content,
       excerpt: data.excerpt || '',
       date: data.date || new Date().toISOString(),
-      author: data.author || ''
+      author: data.author || '',
+      status: data.status || 'published',
+      scheduledDate: data.scheduledDate || undefined
     }
 
     const saved = await savePost(post)
