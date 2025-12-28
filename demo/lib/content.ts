@@ -13,6 +13,8 @@ export interface Post {
   author?: string
   status?: PostStatus
   scheduledDate?: string
+  categories?: string[] // Array of category slugs
+  tags?: string[] // Array of tag slugs
 }
 
 export interface Page {
@@ -154,6 +156,25 @@ export async function getPostBySlug(slug: string, locale?: string): Promise<Post
       const { frontmatter, content: markdownContent } = parseFrontmatter(content)
       
       // Convert frontmatter to Post object
+      // Parse categories and tags from frontmatter (can be comma-separated strings or arrays)
+      let categories: string[] = []
+      if (frontmatter.categories) {
+        if (Array.isArray(frontmatter.categories)) {
+          categories = frontmatter.categories
+        } else if (typeof frontmatter.categories === 'string') {
+          categories = frontmatter.categories.split(',').map(c => c.trim()).filter(c => c)
+        }
+      }
+      
+      let tags: string[] = []
+      if (frontmatter.tags) {
+        if (Array.isArray(frontmatter.tags)) {
+          tags = frontmatter.tags
+        } else if (typeof frontmatter.tags === 'string') {
+          tags = frontmatter.tags.split(',').map(t => t.trim()).filter(t => t)
+        }
+      }
+      
       post = {
         id: frontmatter.id || `post-${Date.now()}`,
         title: frontmatter.title || '',
@@ -163,7 +184,9 @@ export async function getPostBySlug(slug: string, locale?: string): Promise<Post
         date: frontmatter.date || new Date().toISOString(),
         author: frontmatter.author,
         status: frontmatter.status || 'published',
-        scheduledDate: frontmatter.scheduledDate
+        scheduledDate: frontmatter.scheduledDate,
+        categories,
+        tags
       }
     } else {
       // Parse JSON
@@ -207,6 +230,8 @@ export async function savePost(post: Post, locale?: string, useMarkdown: boolean
       if (post.author) frontmatter.author = post.author
       if (post.status) frontmatter.status = post.status
       if (post.scheduledDate) frontmatter.scheduledDate = post.scheduledDate
+      if (post.categories && post.categories.length > 0) frontmatter.categories = post.categories
+      if (post.tags && post.tags.length > 0) frontmatter.tags = post.tags
       
       // Stringify with frontmatter
       content = stringifyFrontmatter(frontmatter, post.content)
@@ -349,4 +374,176 @@ export async function deletePage(slug: string, locale?: string): Promise<boolean
     console.error('Error deleting page:', error)
     return false
   }
+}
+
+// Category and Tag Management
+
+export interface Category {
+  id: string
+  name: string
+  slug: string
+  description?: string
+  parentId?: string // For hierarchical categories
+  locale?: string
+}
+
+export interface Tag {
+  id: string
+  name: string
+  slug: string
+  description?: string
+  locale?: string
+}
+
+// Category functions
+export async function getAllCategories(locale?: string): Promise<Category[]> {
+  try {
+    const categories: Category[] = []
+    const path = locale ? `content/categories/${locale}/` : 'content/categories/'
+    const keys = await storageList(path)
+    
+    for (const key of keys) {
+      if (key.endsWith('.json')) {
+        const slug = key.replace('.json', '').replace(path, '')
+        const category = await getCategoryBySlug(slug, locale)
+        if (category) {
+          categories.push(category)
+        }
+      }
+    }
+    
+    return categories
+  } catch (error) {
+    console.error('Error getting all categories:', error)
+    return []
+  }
+}
+
+export async function getCategoryBySlug(slug: string, locale?: string): Promise<Category | null> {
+  try {
+    const path = locale ? `content/categories/${locale}/${slug}.json` : `content/categories/${slug}.json`
+    const content = await storageGet(path)
+    if (!content) return null
+    return JSON.parse(content) as Category
+  } catch (error) {
+    console.error('Error getting category:', error)
+    return null
+  }
+}
+
+export async function saveCategory(category: Category, locale?: string): Promise<boolean> {
+  try {
+    const content = JSON.stringify(category, null, 2)
+    const path = locale ? `content/categories/${locale}/${category.slug}.json` : `content/categories/${category.slug}.json`
+    return await storageSet(path, content)
+  } catch (error) {
+    console.error('Error saving category:', error)
+    return false
+  }
+}
+
+export async function deleteCategory(slug: string, locale?: string): Promise<boolean> {
+  try {
+    const path = locale ? `content/categories/${locale}/${slug}.json` : `content/categories/${slug}.json`
+    return await storageDelete(path)
+  } catch (error) {
+    console.error('Error deleting category:', error)
+    return false
+  }
+}
+
+// Tag functions
+export async function getAllTags(locale?: string): Promise<Tag[]> {
+  try {
+    const tags: Tag[] = []
+    const path = locale ? `content/tags/${locale}/` : 'content/tags/'
+    const keys = await storageList(path)
+    
+    for (const key of keys) {
+      if (key.endsWith('.json')) {
+        const slug = key.replace('.json', '').replace(path, '')
+        const tag = await getTagBySlug(slug, locale)
+        if (tag) {
+          tags.push(tag)
+        }
+      }
+    }
+    
+    return tags
+  } catch (error) {
+    console.error('Error getting all tags:', error)
+    return []
+  }
+}
+
+export async function getTagBySlug(slug: string, locale?: string): Promise<Tag | null> {
+  try {
+    const path = locale ? `content/tags/${locale}/${slug}.json` : `content/tags/${slug}.json`
+    const content = await storageGet(path)
+    if (!content) return null
+    return JSON.parse(content) as Tag
+  } catch (error) {
+    console.error('Error getting tag:', error)
+    return null
+  }
+}
+
+export async function saveTag(tag: Tag, locale?: string): Promise<boolean> {
+  try {
+    const content = JSON.stringify(tag, null, 2)
+    const path = locale ? `content/tags/${locale}/${tag.slug}.json` : `content/tags/${tag.slug}.json`
+    return await storageSet(path, content)
+  } catch (error) {
+    console.error('Error saving tag:', error)
+    return false
+  }
+}
+
+export async function deleteTag(slug: string, locale?: string): Promise<boolean> {
+  try {
+    const path = locale ? `content/tags/${locale}/${slug}.json` : `content/tags/${slug}.json`
+    return await storageDelete(path)
+  } catch (error) {
+    console.error('Error deleting tag:', error)
+    return false
+  }
+}
+
+// Get posts by category
+export async function getPostsByCategory(categorySlug: string, locale?: string, includeDrafts: boolean = false, includeScheduled: boolean = false): Promise<Post[]> {
+  const allPosts = await getAllPosts(locale, includeDrafts, includeScheduled)
+  return allPosts.filter(post => post.categories?.includes(categorySlug))
+}
+
+// Get posts by tag
+export async function getPostsByTag(tagSlug: string, locale?: string, includeDrafts: boolean = false, includeScheduled: boolean = false): Promise<Post[]> {
+  const allPosts = await getAllPosts(locale, includeDrafts, includeScheduled)
+  return allPosts.filter(post => post.tags?.includes(tagSlug))
+}
+
+// Get category/tag counts
+export async function getCategoryCounts(locale?: string): Promise<Record<string, number>> {
+  const posts = await getAllPosts(locale, false, false)
+  const counts: Record<string, number> = {}
+  
+  posts.forEach(post => {
+    post.categories?.forEach(categorySlug => {
+      counts[categorySlug] = (counts[categorySlug] || 0) + 1
+    })
+  })
+  
+  return counts
+}
+
+export async function getTagCounts(locale?: string): Promise<Record<string, number>> {
+  const posts = await getAllPosts(locale, false, false)
+  const counts: Record<string, number> = {}
+  
+  posts.forEach(post => {
+    post.tags?.forEach(tagSlug => {
+      counts[tagSlug] = (counts[tagSlug] || 0) + 1
+    })
+  })
+  
+  return counts
 }

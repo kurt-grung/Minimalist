@@ -21,6 +21,23 @@ interface Post {
   author?: string
   status?: PostStatus
   scheduledDate?: string
+  categories?: string[]
+  tags?: string[]
+}
+
+interface Category {
+  id: string
+  name: string
+  slug: string
+  description?: string
+  parentId?: string
+}
+
+interface Tag {
+  id: string
+  name: string
+  slug: string
+  description?: string
 }
 
 interface Locale {
@@ -59,6 +76,10 @@ export default function EditPostPage() {
   const [isLocalhost, setIsLocalhost] = useState(false)
   const [errorModal, setErrorModal] = useState<{ isOpen: boolean; message: string; onConfirm?: () => void }>({ isOpen: false, message: '' })
   const [config, setConfig] = useState<SiteConfig>({ siteTitle: 'My Blog', siteSubtitle: 'Welcome to our simple file-based CMS', postRoute: 'posts', pageRoute: '', defaultLocale: 'en', locales: [] })
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [availableCategories, setAvailableCategories] = useState<Category[]>([])
+  const [availableTags, setAvailableTags] = useState<Tag[]>([])
   const router = useRouter()
   const userChangedLocale = useRef(false) // Track if user manually changed locale
 
@@ -82,6 +103,35 @@ export default function EditPostPage() {
     checkAuth()
     loadSettings()
   }, [slug])
+
+  // Load categories and tags when locale changes
+  useEffect(() => {
+    const loadCategoriesAndTags = async () => {
+      const localeToUse = locale || config.defaultLocale || 'en'
+      try {
+        const [categoriesRes, tagsRes] = await Promise.all([
+          fetch(`/api/categories?locale=${localeToUse}`),
+          fetch(`/api/tags?locale=${localeToUse}`)
+        ])
+        
+        if (categoriesRes.ok) {
+          const categories = await categoriesRes.json()
+          setAvailableCategories(categories)
+        }
+        
+        if (tagsRes.ok) {
+          const tags = await tagsRes.json()
+          setAvailableTags(tags)
+        }
+      } catch (err) {
+        console.error('Failed to load categories/tags:', err)
+      }
+    }
+    
+    if (locale || config.defaultLocale) {
+      loadCategoriesAndTags()
+    }
+  }, [locale, config.defaultLocale])
 
   // Initialize locale when config loads or URL locale changes (only if user didn't manually change it)
   useEffect(() => {
@@ -152,6 +202,8 @@ export default function EditPostPage() {
           setExcerpt(foundPost.excerpt || '')
           setAuthor(foundPost.author || '')
           setStatus(foundPost.status || 'published')
+          setSelectedCategories(foundPost.categories || [])
+          setSelectedTags(foundPost.tags || [])
           // Format scheduledDate for datetime-local input (YYYY-MM-DDTHH:mm)
           if (foundPost.scheduledDate) {
             const date = new Date(foundPost.scheduledDate)
@@ -187,6 +239,8 @@ export default function EditPostPage() {
           setAuthor('')
           setStatus('published')
           setScheduledDate('')
+          setSelectedCategories([])
+          setSelectedTags([])
           setLocale(localeToUse)
         }
       } else {
@@ -421,7 +475,9 @@ export default function EditPostPage() {
             status,
             scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : undefined,
             date: post?.date || new Date().toISOString(),
-            locale: currentLocale
+            locale: currentLocale,
+            categories: selectedCategories,
+            tags: selectedTags
           })
         })
 
@@ -681,6 +737,96 @@ export default function EditPostPage() {
             </p>
           </div>
         )}
+
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+            Categories
+          </label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            {availableCategories.map((category) => (
+              <label
+                key={category.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0.5rem 1rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  backgroundColor: selectedCategories.includes(category.slug) ? '#0070f3' : 'white',
+                  color: selectedCategories.includes(category.slug) ? 'white' : '#333'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedCategories.includes(category.slug)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedCategories([...selectedCategories, category.slug])
+                    } else {
+                      setSelectedCategories(selectedCategories.filter(c => c !== category.slug))
+                    }
+                  }}
+                  style={{ marginRight: '0.5rem', cursor: 'pointer' }}
+                />
+                {category.name}
+              </label>
+            ))}
+          </div>
+          {availableCategories.length === 0 && (
+            <p style={{ fontSize: '0.85rem', color: '#666', fontStyle: 'italic' }}>
+              No categories available. Create categories in the admin panel.
+            </p>
+          )}
+          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
+            Select one or more categories for this post.
+          </p>
+        </div>
+
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+            Tags
+          </label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            {availableTags.map((tag) => (
+              <label
+                key={tag.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0.5rem 1rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  backgroundColor: selectedTags.includes(tag.slug) ? '#28a745' : 'white',
+                  color: selectedTags.includes(tag.slug) ? 'white' : '#333'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedTags.includes(tag.slug)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedTags([...selectedTags, tag.slug])
+                    } else {
+                      setSelectedTags(selectedTags.filter(t => t !== tag.slug))
+                    }
+                  }}
+                  style={{ marginRight: '0.5rem', cursor: 'pointer' }}
+                />
+                {tag.name}
+              </label>
+            ))}
+          </div>
+          {availableTags.length === 0 && (
+            <p style={{ fontSize: '0.85rem', color: '#666', fontStyle: 'italic' }}>
+              No tags available. Create tags in the admin panel.
+            </p>
+          )}
+          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
+            Select one or more tags for this post.
+          </p>
+        </div>
 
         <div style={{ marginBottom: '1.5rem' }}>
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>

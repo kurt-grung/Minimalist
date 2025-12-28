@@ -68,7 +68,9 @@ export async function POST(request: NextRequest) {
       date: data.date || new Date().toISOString(),
       author: data.author || '',
       status: data.status || 'published',
-      scheduledDate: data.scheduledDate || undefined
+      scheduledDate: data.scheduledDate || undefined,
+      categories: data.categories || [],
+      tags: data.tags || []
     }
 
     const saved = await savePost(post, locale)

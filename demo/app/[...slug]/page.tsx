@@ -1,4 +1,4 @@
-import { getPostBySlug, getPageBySlug, getAllPosts, getAllPages, type Post, type Page } from '@/lib/content'
+import { getPostBySlug, getPageBySlug, getAllPosts, getAllPages, getTagBySlug, getCategoryBySlug, type Post, type Page } from '@/lib/content'
 import { getConfig } from '@/lib/config'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -381,6 +381,15 @@ export default async function DynamicContentPage({
     const postStatus = post.status || 'published'
     const displayLocale = foundLocale || detectedLocale || config.defaultLocale || 'en'
     const homeUrl = displayLocale !== config.defaultLocale ? `/${displayLocale}` : '/'
+    
+    // Load category and tag information
+    const categories = post.categories ? await Promise.all(
+      post.categories.map(slug => getCategoryBySlug(slug, displayLocale))
+    ) : []
+    const tags = post.tags ? await Promise.all(
+      post.tags.map(slug => getTagBySlug(slug, displayLocale))
+    ) : []
+    
     return (
       <main style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
         {postStatus === 'scheduled' && post.scheduledDate && new Date(post.scheduledDate) > new Date() && (
@@ -422,10 +431,59 @@ export default async function DynamicContentPage({
               </h1>
               <EditButton slug={actualSlug} contentType="post" />
             </div>
-            <div style={{ color: '#666', fontSize: '0.9rem' }}>
+            <div style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1rem' }}>
               <time>{new Date(post.date).toLocaleDateString()}</time>
               {post.author && <span> • By {post.author}</span>}
             </div>
+            
+            {/* Categories */}
+            {categories.filter(c => c !== null).length > 0 && (
+              <div style={{ marginBottom: '1rem' }}>
+                <span style={{ fontSize: '0.9rem', color: '#666', marginRight: '0.5rem' }}>Categories:</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  {categories.filter(c => c !== null).map((category) => (
+                    <Link
+                      key={category!.id}
+                      href={`/category/${category!.slug}${displayLocale !== config.defaultLocale ? `?locale=${displayLocale}` : ''}`}
+                      style={{
+                        padding: '0.4rem 0.75rem',
+                        background: '#0070f3',
+                        color: 'white',
+                        borderRadius: '6px',
+                        fontSize: '0.85rem',
+                        textDecoration: 'none',
+                        display: 'inline-block'
+                      }}
+                    >
+                      {category!.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Tags */}
+            {tags.filter(t => t !== null).length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                {tags.filter(t => t !== null).map((tag) => (
+                  <Link
+                    key={tag!.id}
+                    href={`/tag/${tag!.slug}${displayLocale !== config.defaultLocale ? `?locale=${displayLocale}` : ''}`}
+                    style={{
+                      padding: '0.4rem 0.75rem',
+                      background: '#28a745',
+                      color: 'white',
+                      borderRadius: '12px',
+                      fontSize: '0.85rem',
+                      textDecoration: 'none',
+                      display: 'inline-block'
+                    }}
+                  >
+                    {tag!.name}
+                  </Link>
+                ))}
+              </div>
+            )}
           </header>
 
           {post.content && /<[^>]+>/.test(post.content) ? (

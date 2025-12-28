@@ -197,6 +197,7 @@ The project is organized as a monorepo with two main components:
    - Rich text editor integration
    - Image management system
    - Search functionality
+   - Categories and tags system
 
 ## Tech Stack
 

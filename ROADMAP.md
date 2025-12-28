@@ -20,6 +20,7 @@ This document outlines the planned features, improvements, and enhancements for 
 - ✅ Responsive grid layout with image previews
 - ✅ Full-text search - Search API, results page, and admin panel integration
 - ✅ Content sanitization - XSS protection with HTML sanitization
+- ✅ Categories and tags - Hierarchical categories and flat tags with admin management
 - ✅ Testing infrastructure - Unit tests with Vitest
 - ✅ Pre-commit hooks - Automated testing and build verification
 
@@ -80,16 +81,18 @@ This document outlines the planned features, improvements, and enhancements for 
 
 ### Priority: Medium-High
 
-#### 2.1 Categories and Tags
-- [ ] Category system (hierarchical)
-- [ ] Tag system (flat)
-- [ ] Category/tag management in admin
-- [ ] Category pages (`/category/[slug]`)
-- [ ] Tag pages (`/tag/[slug]`)
-- [ ] Filter posts by category/tag on homepage
-- [ ] Category/tag counts
+#### 2.1 Categories and Tags ✅ COMPLETE
+- [x] Category system (hierarchical)
+- [x] Tag system (flat)
+- [x] Category/tag management in admin
+- [x] Category pages (`/category/[slug]`)
+- [x] Tag pages (`/tag/[slug]`)
+- [x] Filter posts by category/tag on homepage
+- [x] Category/tag counts
 
-**Estimated effort:** 3-4 days
+**Status:** ✅ Complete - Full category and tag system with hierarchical categories, admin management UI, category/tag pages, and post filtering. Multi-locale support included.
+
+**Estimated effort:** 3-4 days (Completed)
 
 #### 2.2 Draft/Publish Workflow
 - [ ] Draft status for posts
@@ -386,9 +389,9 @@ If you'd like to contribute to any of these features:
 - **v1.2.0** - Image management, responsive grid layout, image previews
 - **v1.3.0** - Full-text search functionality
 - **v1.4.0** - Modern card design with uniform sizing, full background images, and gradient overlays
-- **v1.5.0** (Current) - Content sanitization, testing infrastructure, pre-commit hooks, comprehensive documentation
+- **v1.5.0** - Content sanitization, testing infrastructure, pre-commit hooks, comprehensive documentation
 - **v1.6.0** (Planned) - SEO enhancements, improved validation
-- **v2.0.0** (Planned) - Categories, tags, draft workflow
+- **v2.0.0** (Current) - Categories and tags system, draft workflow (in progress)
 - **v2.1.0** (Planned) - RSS feed, pagination, UI/UX improvements
 - **v3.0.0** (Planned) - Multi-user, OAuth, production features
 
@@ -397,6 +400,17 @@ If you'd like to contribute to any of these features:
 *Last updated: January 2025*
 
 ## Recent Updates
+
+### v2.0.0 - Categories and Tags (January 2025)
+- ✅ Hierarchical category system with parent-child relationships
+- ✅ Flat tag system
+- ✅ Category and tag management UI in admin panel
+- ✅ Category pages (`/category/[slug]`) with filtered posts
+- ✅ Tag pages (`/tag/[slug]`) with filtered posts
+- ✅ Category and tag selection in post editor
+- ✅ Category/tag counts functionality
+- ✅ Multi-locale support for categories and tags
+- ✅ Tags and categories displayed on individual post pages
 
 ### v1.5.0 - Testing & Documentation (January 2025)
 - ✅ Comprehensive unit test coverage for CMS package

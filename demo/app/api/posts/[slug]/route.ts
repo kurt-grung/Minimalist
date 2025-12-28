@@ -95,7 +95,9 @@ export async function PUT(
       author: data.author ?? existingPost.author,
       date: data.date ?? existingPost.date,
       status: data.status !== undefined ? data.status : (existingPost.status || 'published'),
-      scheduledDate: data.scheduledDate !== undefined ? data.scheduledDate : existingPost.scheduledDate
+      scheduledDate: data.scheduledDate !== undefined ? data.scheduledDate : existingPost.scheduledDate,
+      categories: data.categories !== undefined ? data.categories : existingPost.categories,
+      tags: data.tags !== undefined ? data.tags : existingPost.tags
     }
 
     const saved = await savePost(post, locale)

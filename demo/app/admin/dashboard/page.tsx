@@ -292,6 +292,38 @@ export default function AdminDashboard() {
             Media Library
           </Link>
           <Link
+            href="/admin/dashboard/categories"
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#ff9800',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              display: 'inline-block'
+            }}
+          >
+            Categories
+          </Link>
+          <Link
+            href="/admin/dashboard/tags"
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              display: 'inline-block'
+            }}
+          >
+            Tags
+          </Link>
+          <Link
             href="/admin/dashboard/new"
             style={{
               padding: '0.75rem 1.5rem',
