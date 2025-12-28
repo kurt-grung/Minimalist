@@ -21,6 +21,7 @@ npm run test:coverage
 - `config.test.ts` - Tests for configuration management (site config, locales)
 - `sanitize.test.ts` - Tests for HTML sanitization (XSS prevention)
 - `search.test.ts` - Tests for search functionality and relevance scoring
+- `markdown.test.ts` - Tests for markdown/HTML conversion utilities (HTML to Markdown, Markdown to HTML, entity encoding/decoding)
 
 ## Test Coverage
 
@@ -31,6 +32,11 @@ The tests cover:
 - ✅ Locale management
 - ✅ HTML sanitization and XSS prevention
 - ✅ Search relevance scoring logic
+- ✅ Markdown to HTML conversion (headings, bold, italic, lists, code blocks, links, images, blockquotes)
+- ✅ HTML to Markdown conversion (all HTML elements)
+- ✅ Round-trip conversions (HTML → Markdown → HTML)
+- ✅ HTML entity encoding/decoding
+- ✅ Double-encoded entity fixing
 
 ## Notes
 
