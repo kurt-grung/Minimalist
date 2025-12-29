@@ -11,9 +11,12 @@ exports.deletePage = deletePage;
 const storage_1 = require("./storage");
 const frontmatter_1 = require("./frontmatter");
 // Get all posts
-async function getAllPosts(locale) {
+// includeDrafts: if true, includes draft posts (for admin panel)
+// includeScheduled: if true, includes scheduled posts regardless of date (for admin panel)
+async function getAllPosts(locale, includeDrafts = false, includeScheduled = false) {
     try {
         const posts = [];
+        const now = new Date();
         if (locale) {
             // Get posts for specific locale
             const keys = await (0, storage_1.storageList)(`content/posts/${locale}/`);
@@ -41,7 +44,37 @@ async function getAllPosts(locale) {
                 }
             }
         }
-        return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        // Set default status to 'published' for backward compatibility
+        let filteredPosts = posts.map(post => ({
+            ...post,
+            status: post.status || 'published'
+        }));
+        // Filter by status if not including drafts
+        if (!includeDrafts) {
+            filteredPosts = filteredPosts.filter(post => {
+                const status = post.status || 'published';
+                // Always include published posts
+                if (status === 'published') {
+                    return true;
+                }
+                // Include scheduled posts only if date has passed (unless includeScheduled is true)
+                if (status === 'scheduled') {
+                    if (includeScheduled) {
+                        return true;
+                    }
+                    const scheduledDate = post.scheduledDate || post.date;
+                    return new Date(scheduledDate) <= now;
+                }
+                // Exclude drafts
+                return false;
+            });
+        }
+        return filteredPosts.sort((a, b) => {
+            // Sort by scheduledDate if scheduled, otherwise by date
+            const dateA = a.status === 'scheduled' && a.scheduledDate ? new Date(a.scheduledDate) : new Date(a.date);
+            const dateB = b.status === 'scheduled' && b.scheduledDate ? new Date(b.scheduledDate) : new Date(b.date);
+            return dateB.getTime() - dateA.getTime();
+        });
     }
     catch (error) {
         console.error('Error getting all posts:', error);
@@ -81,6 +114,25 @@ async function getPostBySlug(slug, locale) {
             // Parse markdown with frontmatter
             const { frontmatter, content: markdownContent } = (0, frontmatter_1.parseFrontmatter)(content);
             // Convert frontmatter to Post object
+            // Parse categories and tags from frontmatter (can be comma-separated strings or arrays)
+            let categories = [];
+            if (frontmatter.categories) {
+                if (Array.isArray(frontmatter.categories)) {
+                    categories = frontmatter.categories;
+                }
+                else if (typeof frontmatter.categories === 'string') {
+                    categories = frontmatter.categories.split(',').map(c => c.trim()).filter(c => c);
+                }
+            }
+            let tags = [];
+            if (frontmatter.tags) {
+                if (Array.isArray(frontmatter.tags)) {
+                    tags = frontmatter.tags;
+                }
+                else if (typeof frontmatter.tags === 'string') {
+                    tags = frontmatter.tags.split(',').map(t => t.trim()).filter(t => t);
+                }
+            }
             post = {
                 id: frontmatter.id || `post-${Date.now()}`,
                 title: frontmatter.title || '',
@@ -88,12 +140,21 @@ async function getPostBySlug(slug, locale) {
                 content: markdownContent.trim(),
                 excerpt: frontmatter.excerpt,
                 date: frontmatter.date || new Date().toISOString(),
-                author: frontmatter.author
+                author: frontmatter.author,
+                status: frontmatter.status || 'published',
+                scheduledDate: frontmatter.scheduledDate,
+                categories,
+                tags,
+                updatedAt: frontmatter.updatedAt
             };
         }
         else {
             // Parse JSON
             post = JSON.parse(content);
+            // Set default status for backward compatibility
+            if (!post.status) {
+                post.status = 'published';
+            }
         }
         return post;
     }
@@ -106,35 +167,50 @@ async function getPostBySlug(slug, locale) {
 // Default format is JSON. Set useMarkdown=true to save as Markdown with frontmatter.
 async function savePost(post, locale, useMarkdown = false) {
     try {
+        // Set updatedAt timestamp
+        const postWithTimestamp = {
+            ...post,
+            updatedAt: new Date().toISOString()
+        };
         let content;
         let extension;
         if (useMarkdown) {
             // Create frontmatter from post metadata
             const frontmatter = {
-                id: post.id,
-                title: post.title,
-                slug: post.slug,
-                date: post.date,
+                id: postWithTimestamp.id,
+                title: postWithTimestamp.title,
+                slug: postWithTimestamp.slug,
+                date: postWithTimestamp.date,
             };
-            if (post.excerpt)
-                frontmatter.excerpt = post.excerpt;
-            if (post.author)
-                frontmatter.author = post.author;
+            if (postWithTimestamp.excerpt)
+                frontmatter.excerpt = postWithTimestamp.excerpt;
+            if (postWithTimestamp.author)
+                frontmatter.author = postWithTimestamp.author;
+            if (postWithTimestamp.status)
+                frontmatter.status = postWithTimestamp.status;
+            if (postWithTimestamp.scheduledDate)
+                frontmatter.scheduledDate = postWithTimestamp.scheduledDate;
+            if (postWithTimestamp.categories && postWithTimestamp.categories.length > 0)
+                frontmatter.categories = postWithTimestamp.categories;
+            if (postWithTimestamp.tags && postWithTimestamp.tags.length > 0)
+                frontmatter.tags = postWithTimestamp.tags;
+            if (postWithTimestamp.updatedAt)
+                frontmatter.updatedAt = postWithTimestamp.updatedAt;
             // Stringify with frontmatter
-            content = (0, frontmatter_1.stringifyFrontmatter)(frontmatter, post.content);
+            content = (0, frontmatter_1.stringifyFrontmatter)(frontmatter, postWithTimestamp.content);
             extension = '.md';
         }
         else {
             // Use JSON format
-            content = JSON.stringify(post, null, 2);
+            content = JSON.stringify(postWithTimestamp, null, 2);
             extension = '.json';
         }
         if (locale) {
-            return await (0, storage_1.storageSet)(`content/posts/${locale}/${post.slug}${extension}`, content);
+            return await (0, storage_1.storageSet)(`content/posts/${locale}/${postWithTimestamp.slug}${extension}`, content);
         }
         else {
             // Legacy format
-            return await (0, storage_1.storageSet)(`content/posts/${post.slug}${extension}`, content);
+            return await (0, storage_1.storageSet)(`content/posts/${postWithTimestamp.slug}${extension}`, content);
         }
     }
     catch (error) {

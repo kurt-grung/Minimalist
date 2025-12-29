@@ -435,55 +435,6 @@ export default async function DynamicContentPage({
               <time>{new Date(post.date).toLocaleDateString()}</time>
               {post.author && <span> • By {post.author}</span>}
             </div>
-            
-            {/* Categories */}
-            {categories.filter(c => c !== null).length > 0 && (
-              <div style={{ marginBottom: '1rem' }}>
-                <span style={{ fontSize: '0.9rem', color: '#666', marginRight: '0.5rem' }}>Categories:</span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
-                  {categories.filter(c => c !== null).map((category) => (
-                    <Link
-                      key={category!.id}
-                      href={`/category/${category!.slug}${displayLocale !== config.defaultLocale ? `?locale=${displayLocale}` : ''}`}
-                      style={{
-                        padding: '0.4rem 0.75rem',
-                        background: '#0070f3',
-                        color: 'white',
-                        borderRadius: '6px',
-                        fontSize: '0.85rem',
-                        textDecoration: 'none',
-                        display: 'inline-block'
-                      }}
-                    >
-                      {category!.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Tags */}
-            {tags.filter(t => t !== null).length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
-                {tags.filter(t => t !== null).map((tag) => (
-                  <Link
-                    key={tag!.id}
-                    href={`/tag/${tag!.slug}${displayLocale !== config.defaultLocale ? `?locale=${displayLocale}` : ''}`}
-                    style={{
-                      padding: '0.4rem 0.75rem',
-                      background: '#28a745',
-                      color: 'white',
-                      borderRadius: '12px',
-                      fontSize: '0.85rem',
-                      textDecoration: 'none',
-                      display: 'inline-block'
-                    }}
-                  >
-                    {tag!.name}
-                  </Link>
-                ))}
-              </div>
-            )}
           </header>
 
           {post.content && /<[^>]+>/.test(post.content) ? (
@@ -504,6 +455,63 @@ export default async function DynamicContentPage({
               }}
             >
               {post.content}
+            </div>
+          )}
+
+          {/* Categories and Tags at bottom */}
+          {(categories.filter(c => c !== null).length > 0 || tags.filter(t => t !== null).length > 0) && (
+            <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid #e0e0e0' }}>
+              {/* Categories */}
+              {categories.filter(c => c !== null).length > 0 && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.9rem', color: '#666', marginRight: '0.5rem', fontWeight: '500' }}>Categories:</span>
+                    {categories.filter(c => c !== null).map((category) => (
+                      <Link
+                        key={category!.id}
+                        href={`/category/${category!.slug}${displayLocale !== config.defaultLocale ? `?locale=${displayLocale}` : ''}`}
+                        style={{
+                          padding: '0.4rem 0.75rem',
+                          background: '#0070f3',
+                          color: 'white',
+                          borderRadius: '6px',
+                          fontSize: '0.85rem',
+                          textDecoration: 'none',
+                          display: 'inline-block'
+                        }}
+                      >
+                        {category!.name}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Tags */}
+              {tags.filter(t => t !== null).length > 0 && (
+                <div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.9rem', color: '#666', marginRight: '0.5rem', fontWeight: '500' }}>Tags:</span>
+                    {tags.filter(t => t !== null).map((tag) => (
+                      <Link
+                        key={tag!.id}
+                        href={`/tag/${tag!.slug}${displayLocale !== config.defaultLocale ? `?locale=${displayLocale}` : ''}`}
+                        style={{
+                          padding: '0.4rem 0.75rem',
+                          background: '#28a745',
+                          color: 'white',
+                          borderRadius: '12px',
+                          fontSize: '0.85rem',
+                          textDecoration: 'none',
+                          display: 'inline-block'
+                        }}
+                      >
+                        {tag!.name}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </article>

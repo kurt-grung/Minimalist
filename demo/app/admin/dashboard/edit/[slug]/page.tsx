@@ -452,7 +452,9 @@ export default function EditPostPage() {
             status,
             scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : undefined,
             date: post.date,
-            locale: currentLocale
+            locale: currentLocale,
+            categories: selectedCategories,
+            tags: selectedTags
           })
         })
 
@@ -529,7 +531,9 @@ export default function EditPostPage() {
             status,
             scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : undefined,
             date: post.date || new Date().toISOString(),
-            locale: currentLocale
+            locale: currentLocale,
+            categories: selectedCategories,
+            tags: selectedTags
           })
         })
 

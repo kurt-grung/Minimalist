@@ -1,3 +1,4 @@
+export type PostStatus = 'draft' | 'published' | 'scheduled';
 export interface Post {
     id: string;
     title: string;
@@ -6,6 +7,11 @@ export interface Post {
     excerpt?: string;
     date: string;
     author?: string;
+    status?: PostStatus;
+    scheduledDate?: string;
+    categories?: string[];
+    tags?: string[];
+    updatedAt?: string;
 }
 export interface Page {
     id: string;
@@ -13,7 +19,7 @@ export interface Page {
     slug: string;
     content: string;
 }
-export declare function getAllPosts(locale?: string): Promise<Post[]>;
+export declare function getAllPosts(locale?: string, includeDrafts?: boolean, includeScheduled?: boolean): Promise<Post[]>;
 export declare function getPostBySlug(slug: string, locale?: string): Promise<Post | null>;
 export declare function savePost(post: Post, locale?: string, useMarkdown?: boolean): Promise<boolean>;
 export declare function deletePost(slug: string, locale?: string): Promise<boolean>;

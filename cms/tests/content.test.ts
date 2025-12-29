@@ -42,9 +42,9 @@ describe('content', () => {
 
     describe('getAllPosts', () => {
       it('should return all posts sorted by date descending', async () => {
-        const post1: Post = { ...mockPost, slug: 'post1', date: '2024-01-01' }
-        const post2: Post = { ...mockPost, slug: 'post2', date: '2024-01-02' }
-        const post3: Post = { ...mockPost, slug: 'post3', date: '2024-01-03' }
+        const post1: Post = { ...mockPost, slug: 'post1', date: '2024-01-01', status: 'published' }
+        const post2: Post = { ...mockPost, slug: 'post2', date: '2024-01-02', status: 'published' }
+        const post3: Post = { ...mockPost, slug: 'post3', date: '2024-01-03', status: 'published' }
 
         mockStorage.storageList.mockResolvedValue(['post1.json', 'post2.json', 'post3.json'])
         // For each post, try .md first (returns null), then .json
@@ -62,19 +62,26 @@ describe('content', () => {
         expect(result[0].slug).toBe('post3')
         expect(result[1].slug).toBe('post2')
         expect(result[2].slug).toBe('post1')
+        // All posts should have status defaulted to 'published'
+        expect(result[0].status).toBe('published')
+        expect(result[1].status).toBe('published')
+        expect(result[2].status).toBe('published')
         expect(mockStorage.storageList).toHaveBeenCalledWith('content/posts/')
       })
 
       it('should filter out non-JSON and non-MD files', async () => {
         mockStorage.storageList.mockResolvedValue(['post1.json', 'post2.txt', 'post3.json', 'post4.md'])
         mockStorage.storageGet
-          .mockResolvedValueOnce(JSON.stringify(mockPost))
-          .mockResolvedValueOnce(JSON.stringify(mockPost))
+          .mockResolvedValueOnce(null) // post1.md
+          .mockResolvedValueOnce(JSON.stringify(mockPost)) // post1.json
+          .mockResolvedValueOnce(null) // post3.md
+          .mockResolvedValueOnce(JSON.stringify(mockPost)) // post3.json
           .mockResolvedValueOnce(`---
 id: post-4
 title: Markdown Post
 slug: post4
 date: 2024-01-01
+status: published
 ---
 
 Content`)
@@ -82,7 +89,7 @@ Content`)
         const result = await getAllPosts()
 
         expect(result).toHaveLength(3)
-        expect(mockStorage.storageGet).toHaveBeenCalledTimes(3)
+        expect(mockStorage.storageGet).toHaveBeenCalledTimes(5) // post1.md, post1.json, post3.md, post3.json, post4.md
       })
 
       it('should return empty array if no posts exist', async () => {
@@ -104,19 +111,109 @@ Content`)
       })
 
       it('should skip posts that fail to load', async () => {
+        const postWithStatus = { ...mockPost, status: 'published' as const }
         mockStorage.storageList.mockResolvedValue(['post1.json', 'post2.json', 'post3.json'])
         // For each post, try .md first (returns null), then .json
         mockStorage.storageGet
           .mockResolvedValueOnce(null) // post1.md
-          .mockResolvedValueOnce(JSON.stringify(mockPost)) // post1.json
+          .mockResolvedValueOnce(JSON.stringify(postWithStatus)) // post1.json
           .mockResolvedValueOnce(null) // post2.md
           .mockResolvedValueOnce(null) // post2.json fails to load
           .mockResolvedValueOnce(null) // post3.md
-          .mockResolvedValueOnce(JSON.stringify(mockPost)) // post3.json
+          .mockResolvedValueOnce(JSON.stringify(postWithStatus)) // post3.json
 
         const result = await getAllPosts()
 
         expect(result).toHaveLength(2) // post2 fails to load, so only post1 and post3 are returned
+      })
+
+      it('should filter out draft posts by default', async () => {
+        const publishedPost: Post = { ...mockPost, slug: 'published', status: 'published' }
+        const draftPost: Post = { ...mockPost, slug: 'draft', status: 'draft' }
+
+        mockStorage.storageList.mockResolvedValue(['published.json', 'draft.json'])
+        mockStorage.storageGet
+          .mockResolvedValueOnce(null) // published.md
+          .mockResolvedValueOnce(JSON.stringify(publishedPost)) // published.json
+          .mockResolvedValueOnce(null) // draft.md
+          .mockResolvedValueOnce(JSON.stringify(draftPost)) // draft.json
+
+        const result = await getAllPosts()
+
+        expect(result).toHaveLength(1)
+        expect(result[0].slug).toBe('published')
+      })
+
+      it('should include draft posts when includeDrafts=true', async () => {
+        const publishedPost: Post = { ...mockPost, slug: 'published', status: 'published' }
+        const draftPost: Post = { ...mockPost, slug: 'draft', status: 'draft' }
+
+        mockStorage.storageList.mockResolvedValue(['published.json', 'draft.json'])
+        mockStorage.storageGet
+          .mockResolvedValueOnce(null) // published.md
+          .mockResolvedValueOnce(JSON.stringify(publishedPost)) // published.json
+          .mockResolvedValueOnce(null) // draft.md
+          .mockResolvedValueOnce(JSON.stringify(draftPost)) // draft.json
+
+        const result = await getAllPosts(undefined, true)
+
+        expect(result).toHaveLength(2)
+        expect(result.map(p => p.slug)).toContain('published')
+        expect(result.map(p => p.slug)).toContain('draft')
+      })
+
+      it('should filter out scheduled posts with future dates by default', async () => {
+        const publishedPost: Post = { ...mockPost, slug: 'published', status: 'published', date: '2024-01-01T00:00:00.000Z' }
+        const futureScheduledPost: Post = { 
+          ...mockPost, 
+          slug: 'scheduled', 
+          status: 'scheduled', 
+          scheduledDate: '2099-01-01T00:00:00.000Z',
+          date: '2024-01-01T00:00:00.000Z'
+        }
+        const pastScheduledPost: Post = { 
+          ...mockPost, 
+          slug: 'past-scheduled', 
+          status: 'scheduled', 
+          scheduledDate: '2020-01-01T00:00:00.000Z',
+          date: '2024-01-01T00:00:00.000Z'
+        }
+
+        mockStorage.storageList.mockResolvedValue(['published.json', 'scheduled.json', 'past-scheduled.json'])
+        mockStorage.storageGet
+          .mockResolvedValueOnce(null) // published.md
+          .mockResolvedValueOnce(JSON.stringify(publishedPost)) // published.json
+          .mockResolvedValueOnce(null) // scheduled.md
+          .mockResolvedValueOnce(JSON.stringify(futureScheduledPost)) // scheduled.json
+          .mockResolvedValueOnce(null) // past-scheduled.md
+          .mockResolvedValueOnce(JSON.stringify(pastScheduledPost)) // past-scheduled.json
+
+        const result = await getAllPosts()
+
+        expect(result).toHaveLength(2) // published and past-scheduled (future scheduled is filtered out)
+        expect(result.map(p => p.slug)).toContain('published')
+        expect(result.map(p => p.slug)).toContain('past-scheduled')
+        expect(result.map(p => p.slug)).not.toContain('scheduled')
+      })
+
+      it('should include all scheduled posts when includeScheduled=true', async () => {
+        const futureScheduledPost: Post = { 
+          ...mockPost, 
+          slug: 'scheduled', 
+          status: 'scheduled', 
+          scheduledDate: '2099-01-01T00:00:00.000Z',
+          date: '2024-01-01T00:00:00.000Z'
+        }
+
+        mockStorage.storageList.mockResolvedValue(['scheduled.json'])
+        mockStorage.storageGet
+          .mockResolvedValueOnce(null) // scheduled.md
+          .mockResolvedValueOnce(JSON.stringify(futureScheduledPost)) // scheduled.json
+
+        const result = await getAllPosts(undefined, false, true)
+
+        expect(result).toHaveLength(1)
+        expect(result[0].slug).toBe('scheduled')
       })
     })
 
@@ -129,7 +226,12 @@ Content`)
 
         const result = await getPostBySlug('test-post')
 
-        expect(result).toEqual(mockPost)
+        expect(result).toBeTruthy()
+        expect(result?.id).toBe(mockPost.id)
+        expect(result?.title).toBe(mockPost.title)
+        expect(result?.slug).toBe(mockPost.slug)
+        expect(result?.content).toBe(mockPost.content)
+        expect(result?.status).toBe('published') // Status defaults to 'published'
         expect(mockStorage.storageGet).toHaveBeenCalledWith('content/posts/test-post.md')
         expect(mockStorage.storageGet).toHaveBeenCalledWith('content/posts/test-post.json')
       })
@@ -142,6 +244,7 @@ slug: test-post
 date: 2024-01-01
 excerpt: Test excerpt
 author: Test Author
+status: published
 ---
 
 This is a test post`
@@ -155,6 +258,7 @@ This is a test post`
         expect(result?.id).toBe('post-123')
         expect(result?.title).toBe('Test Post')
         expect(result?.content.trim()).toBe('This is a test post')
+        expect(result?.status).toBe('published')
         expect(mockStorage.storageGet).toHaveBeenCalledWith('content/posts/test-post.md')
       })
 
@@ -184,10 +288,14 @@ This is a test post`
         const result = await savePost(mockPost)
 
         expect(result).toBe(true)
-        expect(mockStorage.storageSet).toHaveBeenCalledWith(
-          'content/posts/test-post.json',
-          JSON.stringify(mockPost, null, 2),
-        )
+        const callArgs = mockStorage.storageSet.mock.calls[0]
+        expect(callArgs[0]).toBe('content/posts/test-post.json')
+        const savedPost = JSON.parse(callArgs[1])
+        expect(savedPost.id).toBe(mockPost.id)
+        expect(savedPost.title).toBe(mockPost.title)
+        expect(savedPost.slug).toBe(mockPost.slug)
+        expect(savedPost.content).toBe(mockPost.content)
+        expect(savedPost.updatedAt).toBeDefined() // updatedAt is automatically added
       })
 
       it('should save post as Markdown when useMarkdown=true', async () => {
@@ -203,6 +311,7 @@ This is a test post`
         expect(callArgs[1]).toContain('title: Test Post')
         expect(callArgs[1]).toContain('slug: test-post')
         expect(callArgs[1]).toContain('date: 2024-01-01')
+        expect(callArgs[1]).toContain('updatedAt') // updatedAt is automatically added
       })
 
       it('should return false on save error', async () => {

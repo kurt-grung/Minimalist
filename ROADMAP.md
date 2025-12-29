@@ -21,6 +21,7 @@ This document outlines the planned features, improvements, and enhancements for 
 - ✅ Full-text search - Search API, results page, and admin panel integration
 - ✅ Content sanitization - XSS protection with HTML sanitization
 - ✅ Categories and tags - Hierarchical categories and flat tags with admin management
+- ✅ Draft/Publish workflow - Draft, published, and scheduled post statuses with preview mode
 - ✅ Testing infrastructure - Unit tests with Vitest
 - ✅ Pre-commit hooks - Automated testing and build verification
 
@@ -94,15 +95,17 @@ This document outlines the planned features, improvements, and enhancements for 
 
 **Estimated effort:** 3-4 days (Completed)
 
-#### 2.2 Draft/Publish Workflow
-- [ ] Draft status for posts
-- [ ] Published status
-- [ ] Scheduled publishing (future dates)
-- [ ] Preview mode (draft preview URLs)
-- [ ] Post status indicators in admin
-- [ ] Filter by status in admin
+#### 2.2 Draft/Publish Workflow ✅ COMPLETE
+- [x] Draft status for posts
+- [x] Published status
+- [x] Scheduled publishing (future dates)
+- [x] Preview mode (draft preview URLs)
+- [x] Post status indicators in admin
+- [x] Filter by status in admin
 
-**Estimated effort:** 2-3 days
+**Status:** ✅ Complete - Full draft/publish workflow with draft, published, and scheduled statuses. Preview mode allows viewing drafts via `?preview=true` query parameter. Status filtering and indicators in admin dashboard. Scheduled posts automatically become visible when their date arrives.
+
+**Estimated effort:** 2-3 days (Completed)
 
 #### 2.3 Content Types
 - [ ] Pages management UI (currently only posts)
@@ -402,14 +405,27 @@ If you'd like to contribute to any of these features:
 - **v1.6.0** (Planned) - SEO enhancements, improved validation
 - **v2.0.0** - Categories and tags system, draft workflow
 - **v2.1.0** - Quick wins & UX improvements (loading skeletons, keyboard shortcuts, word count, reading time, copy-to-clipboard, last edited tracking)
-- **v2.2.0** (Current) - RSS feed, pagination, additional UI/UX improvements
+- **v2.2.0** - RSS feed, pagination, additional UI/UX improvements
+- **v2.3.0** (Current) - Draft/Publish workflow with scheduled publishing and preview mode
 - **v3.0.0** (Planned) - Multi-user, OAuth, production features
 
 ---
 
-*Last updated: December 2025*
+*Last updated: January 2025*
 
 ## Recent Updates
+
+### v2.3.0 - Draft/Publish Workflow (January 2025)
+- ✅ Draft status for posts (not visible on frontend)
+- ✅ Published status (immediately visible)
+- ✅ Scheduled publishing with future date support
+- ✅ Preview mode for drafts (`?preview=true` query parameter)
+- ✅ Status indicators (badges) in admin dashboard
+- ✅ Status filtering in admin (All/Published/Draft/Scheduled)
+- ✅ Scheduled posts automatically become visible when date arrives
+- ✅ Preview links in admin dashboard and editor
+- ✅ Status selector and scheduled date picker in post editor
+- ✅ Categories and tags display at bottom of post pages
 
 ### v2.2.0 - RSS Feed & Pagination (January 2025)
 - ✅ RSS feed generation at `/feed.xml` with RSS 2.0 format

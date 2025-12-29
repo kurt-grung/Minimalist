@@ -28,6 +28,7 @@ A minimal, file-based headless CMS. No database required - content is stored as 
 - ✅ **Copy-to-clipboard** - Quick copy functionality for slugs and URLs
 - ✅ **RSS feed** - RSS 2.0 feed generation with category/tag filtering and multi-locale support
 - ✅ **Pagination** - Smart pagination with Previous/Next navigation and page numbers
+- ✅ **Draft/Publish workflow** - Draft, published, and scheduled post statuses with preview mode
 
 ## Project Structure
 
@@ -205,6 +206,7 @@ The project is organized as a monorepo with two main components:
    - Image management system
    - Search functionality
    - Categories and tags system
+   - Draft/Publish workflow with scheduled publishing
    - RSS feed generation
    - Pagination system
 

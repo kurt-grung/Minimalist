@@ -1,6 +1,8 @@
 import { storageGet, storageSet, storageDelete, storageList, storageExists } from './storage'
 import { parseFrontmatter, stringifyFrontmatter, Frontmatter } from './frontmatter'
 
+export type PostStatus = 'draft' | 'published' | 'scheduled'
+
 export interface Post {
   id: string
   title: string
@@ -9,6 +11,11 @@ export interface Post {
   excerpt?: string
   date: string
   author?: string
+  status?: PostStatus
+  scheduledDate?: string
+  categories?: string[] // Array of category slugs
+  tags?: string[] // Array of tag slugs
+  updatedAt?: string // Last edited timestamp
 }
 
 export interface Page {
@@ -19,9 +26,12 @@ export interface Page {
 }
 
 // Get all posts
-export async function getAllPosts(locale?: string): Promise<Post[]> {
+// includeDrafts: if true, includes draft posts (for admin panel)
+// includeScheduled: if true, includes scheduled posts regardless of date (for admin panel)
+export async function getAllPosts(locale?: string, includeDrafts: boolean = false, includeScheduled: boolean = false): Promise<Post[]> {
   try {
     const posts: Post[] = []
+    const now = new Date()
     
     if (locale) {
       // Get posts for specific locale
@@ -50,7 +60,42 @@ export async function getAllPosts(locale?: string): Promise<Post[]> {
       }
     }
     
-    return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    // Set default status to 'published' for backward compatibility
+    let filteredPosts = posts.map(post => ({
+      ...post,
+      status: post.status || 'published'
+    }))
+    
+    // Filter by status if not including drafts
+    if (!includeDrafts) {
+      filteredPosts = filteredPosts.filter(post => {
+        const status = post.status || 'published'
+        
+        // Always include published posts
+        if (status === 'published') {
+          return true
+        }
+        
+        // Include scheduled posts only if date has passed (unless includeScheduled is true)
+        if (status === 'scheduled') {
+          if (includeScheduled) {
+            return true
+          }
+          const scheduledDate = post.scheduledDate || post.date
+          return new Date(scheduledDate) <= now
+        }
+        
+        // Exclude drafts
+        return false
+      })
+    }
+    
+    return filteredPosts.sort((a, b) => {
+      // Sort by scheduledDate if scheduled, otherwise by date
+      const dateA = a.status === 'scheduled' && a.scheduledDate ? new Date(a.scheduledDate) : new Date(a.date)
+      const dateB = b.status === 'scheduled' && b.scheduledDate ? new Date(b.scheduledDate) : new Date(b.date)
+      return dateB.getTime() - dateA.getTime()
+    })
   } catch (error) {
     console.error('Error getting all posts:', error)
     return []
@@ -94,6 +139,25 @@ export async function getPostBySlug(slug: string, locale?: string): Promise<Post
       const { frontmatter, content: markdownContent } = parseFrontmatter(content)
       
       // Convert frontmatter to Post object
+      // Parse categories and tags from frontmatter (can be comma-separated strings or arrays)
+      let categories: string[] = []
+      if (frontmatter.categories) {
+        if (Array.isArray(frontmatter.categories)) {
+          categories = frontmatter.categories
+        } else if (typeof frontmatter.categories === 'string') {
+          categories = frontmatter.categories.split(',').map(c => c.trim()).filter(c => c)
+        }
+      }
+      
+      let tags: string[] = []
+      if (frontmatter.tags) {
+        if (Array.isArray(frontmatter.tags)) {
+          tags = frontmatter.tags
+        } else if (typeof frontmatter.tags === 'string') {
+          tags = frontmatter.tags.split(',').map(t => t.trim()).filter(t => t)
+        }
+      }
+      
       post = {
         id: frontmatter.id || `post-${Date.now()}`,
         title: frontmatter.title || '',
@@ -101,11 +165,20 @@ export async function getPostBySlug(slug: string, locale?: string): Promise<Post
         content: markdownContent.trim(),
         excerpt: frontmatter.excerpt,
         date: frontmatter.date || new Date().toISOString(),
-        author: frontmatter.author
+        author: frontmatter.author,
+        status: frontmatter.status || 'published',
+        scheduledDate: frontmatter.scheduledDate,
+        categories,
+        tags,
+        updatedAt: frontmatter.updatedAt
       }
     } else {
       // Parse JSON
       post = JSON.parse(content) as Post
+      // Set default status for backward compatibility
+      if (!post.status) {
+        post.status = 'published'
+      }
     }
     
     return post
@@ -119,34 +192,45 @@ export async function getPostBySlug(slug: string, locale?: string): Promise<Post
 // Default format is JSON. Set useMarkdown=true to save as Markdown with frontmatter.
 export async function savePost(post: Post, locale?: string, useMarkdown: boolean = false): Promise<boolean> {
   try {
+    // Set updatedAt timestamp
+    const postWithTimestamp = {
+      ...post,
+      updatedAt: new Date().toISOString()
+    }
+    
     let content: string
     let extension: string
     
     if (useMarkdown) {
       // Create frontmatter from post metadata
       const frontmatter: Frontmatter = {
-        id: post.id,
-        title: post.title,
-        slug: post.slug,
-        date: post.date,
+        id: postWithTimestamp.id,
+        title: postWithTimestamp.title,
+        slug: postWithTimestamp.slug,
+        date: postWithTimestamp.date,
       }
-      if (post.excerpt) frontmatter.excerpt = post.excerpt
-      if (post.author) frontmatter.author = post.author
+      if (postWithTimestamp.excerpt) frontmatter.excerpt = postWithTimestamp.excerpt
+      if (postWithTimestamp.author) frontmatter.author = postWithTimestamp.author
+      if (postWithTimestamp.status) frontmatter.status = postWithTimestamp.status
+      if (postWithTimestamp.scheduledDate) frontmatter.scheduledDate = postWithTimestamp.scheduledDate
+      if (postWithTimestamp.categories && postWithTimestamp.categories.length > 0) frontmatter.categories = postWithTimestamp.categories
+      if (postWithTimestamp.tags && postWithTimestamp.tags.length > 0) frontmatter.tags = postWithTimestamp.tags
+      if (postWithTimestamp.updatedAt) frontmatter.updatedAt = postWithTimestamp.updatedAt
       
       // Stringify with frontmatter
-      content = stringifyFrontmatter(frontmatter, post.content)
+      content = stringifyFrontmatter(frontmatter, postWithTimestamp.content)
       extension = '.md'
     } else {
       // Use JSON format
-      content = JSON.stringify(post, null, 2)
+      content = JSON.stringify(postWithTimestamp, null, 2)
       extension = '.json'
     }
     
     if (locale) {
-      return await storageSet(`content/posts/${locale}/${post.slug}${extension}`, content)
+      return await storageSet(`content/posts/${locale}/${postWithTimestamp.slug}${extension}`, content)
     } else {
       // Legacy format
-      return await storageSet(`content/posts/${post.slug}${extension}`, content)
+      return await storageSet(`content/posts/${postWithTimestamp.slug}${extension}`, content)
     }
   } catch (error) {
     console.error('Error saving post:', error)
