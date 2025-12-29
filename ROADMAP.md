@@ -129,21 +129,30 @@ This document outlines the planned features, improvements, and enhancements for 
 
 **Estimated effort:** 2-3 days (Completed)
 
-#### 3.2 RSS Feed
-- [ ] RSS feed generation (`/feed.xml`)
-- [ ] RSS feed for categories
-- [ ] RSS feed configuration
-- [ ] Atom feed support
+#### 3.2 RSS Feed ✅ COMPLETE
+- [x] RSS feed generation (`/feed.xml`)
+- [x] RSS feed for categories (via query parameter)
+- [x] RSS feed for tags (via query parameter)
+- [x] RSS feed configuration (site title, description, locale support)
+- [x] RSS feed discoverability (metadata link in HTML head)
+- [ ] Atom feed support (optional enhancement)
 
-**Estimated effort:** 1 day
+**Status:** ✅ Complete - Full RSS 2.0 feed with category/tag filtering, multi-locale support, and proper metadata. Feed includes post titles, descriptions, full content, publication dates, and proper XML escaping.
 
-#### 3.3 Pagination
-- [ ] Pagination on homepage (posts list)
-- [ ] Pagination on category/tag pages
-- [ ] Configurable posts per page
-- [ ] Previous/Next navigation
+**Estimated effort:** 1 day (Completed)
 
-**Estimated effort:** 1-2 days
+#### 3.3 Pagination ✅ COMPLETE
+- [x] Pagination on homepage (posts list)
+- [x] Pagination on category/tag pages
+- [x] Configurable posts per page (via config.json)
+- [x] Previous/Next navigation
+- [x] Page number navigation with ellipsis for large page counts
+- [x] Active page highlighting
+- [x] Clean URLs (page 1 removes page parameter)
+
+**Status:** ✅ Complete - Full pagination system with smart page number display, Previous/Next buttons, and proper URL handling. Works on homepage, category pages, and tag pages.
+
+**Estimated effort:** 1-2 days (Completed)
 
 #### 3.4 UI/UX Improvements
 - [x] Confirmation dialogs (ConfirmModal component)
@@ -392,15 +401,28 @@ If you'd like to contribute to any of these features:
 - **v1.5.0** - Content sanitization, testing infrastructure, pre-commit hooks, comprehensive documentation
 - **v1.6.0** (Planned) - SEO enhancements, improved validation
 - **v2.0.0** - Categories and tags system, draft workflow
-- **v2.1.0** (Current) - Quick wins & UX improvements (loading skeletons, keyboard shortcuts, word count, reading time, copy-to-clipboard, last edited tracking)
-- **v2.2.0** (Planned) - RSS feed, pagination, additional UI/UX improvements
+- **v2.1.0** - Quick wins & UX improvements (loading skeletons, keyboard shortcuts, word count, reading time, copy-to-clipboard, last edited tracking)
+- **v2.2.0** (Current) - RSS feed, pagination, additional UI/UX improvements
 - **v3.0.0** (Planned) - Multi-user, OAuth, production features
 
 ---
 
-*Last updated: January 2025*
+*Last updated: December 2025*
 
 ## Recent Updates
+
+### v2.2.0 - RSS Feed & Pagination (January 2025)
+- ✅ RSS feed generation at `/feed.xml` with RSS 2.0 format
+- ✅ RSS feed filtering by category and tag (via query parameters)
+- ✅ RSS feed multi-locale support
+- ✅ RSS feed discoverability (metadata link in HTML head)
+- ✅ Pagination component with Previous/Next navigation
+- ✅ Page number navigation with smart ellipsis display
+- ✅ Pagination on homepage, category pages, and tag pages
+- ✅ Configurable posts per page via config.json
+- ✅ Clean URL handling (page 1 removes page parameter)
+- ✅ Active page highlighting in pagination
+- ✅ Client Component fix for Pagination (event handlers support)
 
 ### v2.1.0 - Quick Wins & UX Improvements (January 2025)
 - ✅ Loading skeletons with shimmer animation for admin dashboard

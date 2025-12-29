@@ -5,6 +5,7 @@ import Footer from '@/components/Footer'
 import LocaleSelector from '@/components/LocaleSelector'
 import SafeHtml from '@/components/SafeHtml'
 import PostImagePreview from '@/components/PostImagePreview'
+import Pagination from '@/components/Pagination'
 
 // Extract first image URL from HTML or Markdown content
 function extractFirstImage(content: string): string | null {
@@ -30,12 +31,14 @@ export default async function TagPage({
   searchParams
 }: {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ locale?: string }>
+  searchParams: Promise<{ locale?: string; page?: string }>
 }) {
   const config = getConfig()
   const resolvedParams = await params
   const resolvedSearchParams = await searchParams
   const locale = resolvedSearchParams.locale || config.defaultLocale || 'en'
+  const currentPage = parseInt(resolvedSearchParams.page || '1', 10) || 1
+  const postsPerPage = config.postsPerPage || 12
   const tagSlug = decodeURIComponent(resolvedParams.slug)
   const tag = await getTagBySlug(tagSlug, locale)
   
@@ -48,8 +51,12 @@ export default async function TagPage({
     )
   }
   
-  const posts = await getAllPosts(locale, false, false)
-  const tagPosts = posts.filter(post => post.tags?.includes(tagSlug))
+  const allPosts = await getAllPosts(locale, false, false)
+  const allTagPosts = allPosts.filter(post => post.tags?.includes(tagSlug))
+  const totalPages = Math.ceil(allTagPosts.length / postsPerPage)
+  const startIndex = (currentPage - 1) * postsPerPage
+  const endIndex = startIndex + postsPerPage
+  const tagPosts = allTagPosts.slice(startIndex, endIndex)
   const postRoute = config.postRoute !== undefined && config.postRoute !== null ? config.postRoute : 'posts'
   const siteTitle = config.siteTitle || 'My Blog'
 
@@ -66,7 +73,7 @@ export default async function TagPage({
               <p style={{ fontSize: '1.2rem', color: '#666' }}>{tag.description}</p>
             )}
             <p style={{ color: '#666', marginTop: '0.5rem' }}>
-              {tagPosts.length} {tagPosts.length === 1 ? 'post' : 'posts'}
+              {allTagPosts.length} {allTagPosts.length === 1 ? 'post' : 'posts'}
             </p>
           </div>
           <LocaleSelector 
@@ -169,6 +176,14 @@ export default async function TagPage({
           </div>
         )}
       </section>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        baseUrl={`/tag/${tagSlug}${locale !== config.defaultLocale ? `?locale=${locale}` : ''}`}
+        locale={locale}
+        defaultLocale={config.defaultLocale || 'en'}
+      />
 
       <Footer />
     </main>

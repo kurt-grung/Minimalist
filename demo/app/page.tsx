@@ -5,6 +5,7 @@ import Footer from '@/components/Footer'
 import LocaleSelector from '@/components/LocaleSelector'
 import SafeHtml from '@/components/SafeHtml'
 import PostImagePreview from '@/components/PostImagePreview'
+import Pagination from '@/components/Pagination'
 import SearchBar from '@/components/SearchBar'
 
 // Extract first image URL from HTML or Markdown content
@@ -26,11 +27,24 @@ function extractFirstImage(content: string): string | null {
   return null
 }
 
-export default async function Home() {
+export default async function Home({
+  searchParams
+}: {
+  searchParams?: Promise<{ page?: string }>
+}) {
   const config = getConfig()
   // Load posts from default locale for homepage (only published posts)
   const locale = config.defaultLocale || 'en'
-  const posts = await getAllPosts(locale, false, false)
+  const resolvedSearchParams = await searchParams
+  const currentPage = parseInt(resolvedSearchParams?.page || '1', 10) || 1
+  const postsPerPage = config.postsPerPage || 12
+  
+  const allPosts = await getAllPosts(locale, false, false)
+  const totalPages = Math.ceil(allPosts.length / postsPerPage)
+  const startIndex = (currentPage - 1) * postsPerPage
+  const endIndex = startIndex + postsPerPage
+  const posts = allPosts.slice(startIndex, endIndex)
+  
   const postRoute = config.postRoute !== undefined && config.postRoute !== null ? config.postRoute : 'posts'
   const siteTitle = config.siteTitle || 'My Blog'
   const siteSubtitle = config.siteSubtitle || 'Welcome to our simple file-based CMS'
@@ -154,6 +168,14 @@ export default async function Home() {
           </div>
         )}
       </section>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        baseUrl="/"
+        locale={locale}
+        defaultLocale={config.defaultLocale || 'en'}
+      />
 
       <Footer />
     </main>

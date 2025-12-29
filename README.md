@@ -1,6 +1,6 @@
 # Minimalist CMS
 
-A minimal, file-based headless CMS for Next.js. No database required - content is stored as files (JSON or Markdown with frontmatter).
+A minimal, file-based headless CMS. No database required - content is stored as files (JSON or Markdown with frontmatter).
 
 ## Features
 
@@ -26,6 +26,8 @@ A minimal, file-based headless CMS for Next.js. No database required - content i
 - ✅ **Word count & reading time** - Real-time word count and reading time estimates
 - ✅ **Last edited tracking** - Automatic timestamp tracking for post edits
 - ✅ **Copy-to-clipboard** - Quick copy functionality for slugs and URLs
+- ✅ **RSS feed** - RSS 2.0 feed generation with category/tag filtering and multi-locale support
+- ✅ **Pagination** - Smart pagination with Previous/Next navigation and page numbers
 
 ## Project Structure
 
@@ -203,6 +205,8 @@ The project is organized as a monorepo with two main components:
    - Image management system
    - Search functionality
    - Categories and tags system
+   - RSS feed generation
+   - Pagination system
 
 ## Tech Stack
 

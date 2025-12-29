@@ -20,20 +20,33 @@ export default function Footer() {
       paddingTop: '2rem', 
       textAlign: 'center'
     }}>
-      <p style={{ margin: '0 0 0.5rem 0', color: '#666', fontSize: '0.9rem' }}>
-        Powered by Minimalist
-      </p>
-      {isLocalhost && (
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
         <Link 
-          href="/admin" 
+          href="/feed.xml" 
           style={{ 
             color: '#0070f3',
-            textDecoration: 'underline'
+            textDecoration: 'none',
+            fontSize: '0.9rem'
           }}
         >
-          Admin Panel
+          RSS Feed
         </Link>
-      )}
+        {isLocalhost && (
+          <Link 
+            href="/admin" 
+            style={{ 
+              color: '#0070f3',
+              textDecoration: 'none',
+              fontSize: '0.9rem'
+            }}
+          >
+            Admin Panel
+          </Link>
+        )}
+      </div>
+      <p style={{ margin: '0', color: '#666', fontSize: '0.9rem' }}>
+        Powered by Minimalist
+      </p>
     </footer>
   )
 }

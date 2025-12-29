@@ -16,6 +16,7 @@ export interface SiteConfig {
   pageRoute: string  // e.g., "", "pages", "content"
   defaultLocale: string  // Default locale code, e.g., "en"
   locales: Locale[]  // Available locales
+  postsPerPage?: number  // Number of posts per page (default: 12)
 }
 
 const DEFAULT_CONFIG: SiteConfig = {
@@ -26,7 +27,8 @@ const DEFAULT_CONFIG: SiteConfig = {
   defaultLocale: 'en',
   locales: [
     { code: 'en', name: 'English', enabled: true }
-  ]
+  ],
+  postsPerPage: 12
 }
 
 // Ensure config file exists

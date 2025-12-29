@@ -4,6 +4,7 @@
   "siteTitle": "Minimalist CMS",
   "siteSubtitle": "Minimalist CMS. Headless. No backend.",
   "defaultLocale": "en",
+  "postsPerPage": 12,
   "locales": [
     {
       "code": "en",
