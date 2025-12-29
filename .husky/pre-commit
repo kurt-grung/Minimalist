@@ -3,32 +3,51 @@ echo "🔍 Running pre-commit checks..."
 
 # Run tests for CMS package
 echo "🧪 Running CMS package tests..."
-npm run test:cms || {
-  echo "❌ CMS package tests failed. Please fix the errors before committing."
-  exit 1
-}
+if [ -d "cms/node_modules" ]; then
+  cd cms && VITEST_THREADS=false npm test || {
+    echo "❌ CMS package tests failed. Please fix the errors before committing."
+    exit 1
+  }
+  cd ..
+else
+  npm run test:cms || {
+    echo "❌ CMS package tests failed. Please fix the errors before committing."
+    exit 1
+  }
+fi
 
 # Run tests for demo app
 echo "🧪 Running demo app tests..."
-npm run test:demo || {
-  echo "❌ Demo app tests failed. Please fix the errors before committing."
-  exit 1
-}
+if [ -d "demo/node_modules" ]; then
+  cd demo && VITEST_THREADS=false npm test || {
+    echo "❌ Demo app tests failed. Please fix the errors before committing."
+    exit 1
+  }
+  cd ..
+else
+  npm run test:demo || {
+    echo "❌ Demo app tests failed. Please fix the errors before committing."
+    exit 1
+  }
+fi
 
-# Type check demo app
-echo "🔍 Running TypeScript type check for demo app..."
-cd demo && npx tsc --noEmit || {
-  echo "❌ TypeScript errors found in demo app. Please fix the errors before committing."
-  exit 1
-}
-cd ..
+# Type check demo app (build check will catch TypeScript errors)
+echo "🔍 TypeScript type check will be performed during build check..."
 
 # Build check (CMS package)
 echo "🔨 Running CMS package build check..."
-npm run build:package || {
-  echo "❌ CMS package build failed. Please fix the errors before committing."
-  exit 1
-}
+if [ -d "cms/node_modules" ]; then
+  cd cms && npm run build || {
+    echo "❌ CMS package build failed. Please fix the errors before committing."
+    exit 1
+  }
+  cd ..
+else
+  npm run build:package || {
+    echo "❌ CMS package build failed. Please fix the errors before committing."
+    exit 1
+  }
+fi
 
 # Build check (Demo app - this will catch TypeScript errors)
 echo "🔨 Running demo app build check..."

@@ -15,6 +15,7 @@ export interface Post {
   scheduledDate?: string
   categories?: string[] // Array of category slugs
   tags?: string[] // Array of tag slugs
+  updatedAt?: string // Last edited timestamp
 }
 
 export interface Page {
@@ -186,7 +187,8 @@ export async function getPostBySlug(slug: string, locale?: string): Promise<Post
         status: frontmatter.status || 'published',
         scheduledDate: frontmatter.scheduledDate,
         categories,
-        tags
+        tags,
+        updatedAt: frontmatter.updatedAt
       }
     } else {
       // Parse JSON
@@ -215,38 +217,45 @@ export async function getPostBySlug(slug: string, locale?: string): Promise<Post
 // Default format is JSON. Set useMarkdown=true to save as Markdown with frontmatter.
 export async function savePost(post: Post, locale?: string, useMarkdown: boolean = false): Promise<boolean> {
   try {
+    // Set updatedAt timestamp
+    const postWithTimestamp = {
+      ...post,
+      updatedAt: new Date().toISOString()
+    }
+    
     let content: string
     let extension: string
     
     if (useMarkdown) {
       // Create frontmatter from post metadata
       const frontmatter: Frontmatter = {
-        id: post.id,
-        title: post.title,
-        slug: post.slug,
-        date: post.date,
+        id: postWithTimestamp.id,
+        title: postWithTimestamp.title,
+        slug: postWithTimestamp.slug,
+        date: postWithTimestamp.date,
       }
-      if (post.excerpt) frontmatter.excerpt = post.excerpt
-      if (post.author) frontmatter.author = post.author
-      if (post.status) frontmatter.status = post.status
-      if (post.scheduledDate) frontmatter.scheduledDate = post.scheduledDate
-      if (post.categories && post.categories.length > 0) frontmatter.categories = post.categories
-      if (post.tags && post.tags.length > 0) frontmatter.tags = post.tags
+      if (postWithTimestamp.excerpt) frontmatter.excerpt = postWithTimestamp.excerpt
+      if (postWithTimestamp.author) frontmatter.author = postWithTimestamp.author
+      if (postWithTimestamp.status) frontmatter.status = postWithTimestamp.status
+      if (postWithTimestamp.scheduledDate) frontmatter.scheduledDate = postWithTimestamp.scheduledDate
+      if (postWithTimestamp.categories && postWithTimestamp.categories.length > 0) frontmatter.categories = postWithTimestamp.categories
+      if (postWithTimestamp.tags && postWithTimestamp.tags.length > 0) frontmatter.tags = postWithTimestamp.tags
+      if (postWithTimestamp.updatedAt) frontmatter.updatedAt = postWithTimestamp.updatedAt
       
       // Stringify with frontmatter
-      content = stringifyFrontmatter(frontmatter, post.content)
+      content = stringifyFrontmatter(frontmatter, postWithTimestamp.content)
       extension = '.md'
     } else {
       // Use JSON format
-      content = JSON.stringify(post, null, 2)
+      content = JSON.stringify(postWithTimestamp, null, 2)
       extension = '.json'
     }
     
     if (locale) {
-      return await storageSet(`content/posts/${locale}/${post.slug}${extension}`, content)
+      return await storageSet(`content/posts/${locale}/${postWithTimestamp.slug}${extension}`, content)
     } else {
       // Legacy format
-      return await storageSet(`content/posts/${post.slug}${extension}`, content)
+      return await storageSet(`content/posts/${postWithTimestamp.slug}${extension}`, content)
     }
   } catch (error) {
     console.error('Error saving post:', error)

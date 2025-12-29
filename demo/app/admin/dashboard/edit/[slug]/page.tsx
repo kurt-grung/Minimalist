@@ -5,6 +5,8 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import RichTextEditor from '@/components/RichTextEditor'
 import ConfirmModal from '@/components/ConfirmModal'
+import CopyButton from '@/components/CopyButton'
+import { getWordCount, getReadingTime, formatReadingTime, formatRelativeTime, formatDate } from '@/lib/utils'
 
 // Force dynamic rendering - this page uses browser-only APIs
 export const dynamic = 'force-dynamic'
@@ -23,6 +25,7 @@ interface Post {
   scheduledDate?: string
   categories?: string[]
   tags?: string[]
+  updatedAt?: string
 }
 
 interface Category {
@@ -80,8 +83,12 @@ export default function EditPostPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [availableCategories, setAvailableCategories] = useState<Category[]>([])
   const [availableTags, setAvailableTags] = useState<Tag[]>([])
+  const [wordCount, setWordCount] = useState(0)
+  const [readingTime, setReadingTime] = useState(0)
+  const [showCopySuccess, setShowCopySuccess] = useState(false)
   const router = useRouter()
   const userChangedLocale = useRef(false) // Track if user manually changed locale
+  const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
     // Reset user changed locale flag when slug changes (new post being edited)
@@ -204,6 +211,10 @@ export default function EditPostPage() {
           setStatus(foundPost.status || 'published')
           setSelectedCategories(foundPost.categories || [])
           setSelectedTags(foundPost.tags || [])
+          // Update word count and reading time
+          const words = getWordCount(foundPost.content)
+          setWordCount(words)
+          setReadingTime(getReadingTime(words))
           // Format scheduledDate for datetime-local input (YYYY-MM-DDTHH:mm)
           if (foundPost.scheduledDate) {
             const date = new Date(foundPost.scheduledDate)
@@ -246,7 +257,7 @@ export default function EditPostPage() {
       } else {
         setErrorModal({
           isOpen: true,
-          message: 'Failed to load post',
+          message: 'Unable to load post. It may have been deleted or moved. You will be redirected to the dashboard.',
           onConfirm: () => {
             setErrorModal({ isOpen: false, message: '' })
             router.push('/admin/dashboard')
@@ -254,14 +265,14 @@ export default function EditPostPage() {
         })
       }
     } catch (err) {
-      setErrorModal({
-        isOpen: true,
-        message: 'Error loading post',
-        onConfirm: () => {
-          setErrorModal({ isOpen: false, message: '' })
-          router.push('/admin/dashboard')
-        }
-      })
+        setErrorModal({
+          isOpen: true,
+          message: 'An error occurred while loading the post. Please check your connection and try again.',
+          onConfirm: () => {
+            setErrorModal({ isOpen: false, message: '' })
+            router.push('/admin/dashboard')
+          }
+        })
     } finally {
       if (showLoading) {
         setLoading(false)
@@ -306,12 +317,23 @@ export default function EditPostPage() {
 
   const handleContentChange = (newContent: string) => {
     setContent(newContent)
+    // Update word count and reading time
+    const words = getWordCount(newContent)
+    setWordCount(words)
+    setReadingTime(getReadingTime(words))
     // Auto-generate excerpt from content if excerpt is empty or matches previous auto-generated one
     const currentExcerpt = excerpt || (post?.excerpt || '')
     if (!currentExcerpt || currentExcerpt === generateExcerpt(content)) {
       setExcerpt(generateExcerpt(newContent))
     }
   }
+
+  // Update word count when content or post changes
+  useEffect(() => {
+    const words = getWordCount(content)
+    setWordCount(words)
+    setReadingTime(getReadingTime(words))
+  }, [content])
 
   // Auto-save as draft when navigating away
   useEffect(() => {
@@ -439,7 +461,7 @@ export default function EditPostPage() {
           setSaving(false)
           setErrorModal({
             isOpen: true,
-            message: data.error || 'Failed to create new post'
+            message: data.error || 'Unable to create new post. Please check that the slug is unique and try again.'
           })
           return
         }
@@ -455,7 +477,7 @@ export default function EditPostPage() {
         if (!deleteResponse.ok) {
           setErrorModal({
             isOpen: true,
-            message: 'New post created but failed to delete old post. Please delete it manually.'
+            message: 'New post was created successfully, but the old post could not be deleted automatically. Please delete it manually from the dashboard.'
           })
         }
       } else if (!postExists || !post) {
@@ -486,7 +508,7 @@ export default function EditPostPage() {
           setSaving(false)
           setErrorModal({
             isOpen: true,
-            message: data.error || 'Failed to create post'
+            message: data.error || 'Unable to create post. Please check that all required fields are filled and the slug is unique.'
           })
           return
         }
@@ -516,7 +538,7 @@ export default function EditPostPage() {
           setSaving(false)
           setErrorModal({
             isOpen: true,
-            message: data.error || 'Failed to update post'
+            message: data.error || 'Unable to update post. Please check your connection and try again.'
           })
           return
         }
@@ -531,15 +553,61 @@ export default function EditPostPage() {
       setSaving(false)
       setErrorModal({
         isOpen: true,
-        message: 'Error saving post'
+        message: 'An error occurred while saving the post. Your changes may not have been saved. Please try again.'
       })
     }
   }
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + S to save
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault()
+        if (formRef.current && !saving) {
+          formRef.current.requestSubmit()
+        }
+      }
+      // Cmd/Ctrl + K to preview (if draft)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        if (status === 'draft' && postSlug) {
+          const previewUrl = `${config.postRoute ? `/${config.postRoute}/${postSlug}` : `/${postSlug}`}?preview=true`
+          window.open(previewUrl, '_blank')
+        }
+      }
+      // Escape to cancel/go back
+      if (e.key === 'Escape' && !errorModal.isOpen) {
+        router.push('/admin/dashboard')
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [saving, status, postSlug, config.postRoute, errorModal.isOpen, router])
+
   if (loading) {
     return (
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-        <p>Loading...</p>
+        <div
+          style={{
+            height: '200px',
+            background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+            backgroundSize: '200% 100%',
+            animation: 'shimmer 1.5s infinite',
+            borderRadius: '8px'
+          }}
+        />
+        <style jsx>{`
+          @keyframes shimmer {
+            0% {
+              background-position: -200% 0;
+            }
+            100% {
+              background-position: 200% 0;
+            }
+          }
+        `}</style>
       </main>
     )
   }
@@ -568,7 +636,7 @@ export default function EditPostPage() {
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} style={{
+      <form ref={formRef} onSubmit={handleSubmit} style={{
         background: 'white',
         borderRadius: '12px',
         padding: '2rem',
@@ -597,21 +665,28 @@ export default function EditPostPage() {
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
             Slug {slugChanged && <span style={{ color: '#ff9800', fontSize: '0.9rem' }}>(changing slug will create a new {postRouteCapitalized || 'post'})</span>}
           </label>
-          <input
-            type="text"
-            value={postSlug}
-            onChange={(e) => setPostSlug(e.target.value)}
-            placeholder="my-post-title"
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: slugChanged ? '2px solid #ff9800' : '1px solid #ddd',
-              borderRadius: '6px',
-              fontSize: '1rem',
-              backgroundColor: 'white',
-              cursor: 'text'
-            }}
-          />
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <input
+              type="text"
+              value={postSlug}
+              onChange={(e) => setPostSlug(e.target.value)}
+              placeholder="my-post-title"
+              style={{
+                flex: 1,
+                padding: '0.75rem',
+                border: slugChanged ? '2px solid #ff9800' : '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                backgroundColor: 'white',
+                cursor: 'text'
+              }}
+            />
+            <CopyButton
+              text={postSlug || slug}
+              label="slug"
+              onCopy={() => setShowCopySuccess(true)}
+            />
+          </div>
           <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
             URL will be: <span style={{ fontFamily: 'monospace', color: '#0070f3' }}>
               {postRoute ? `/${postRoute}/${postSlug || 'your-slug'}` : `/${postSlug || 'your-slug'}`}
@@ -829,9 +904,20 @@ export default function EditPostPage() {
         </div>
 
         <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-            Content *
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <label style={{ fontWeight: '500' }}>
+              Content *
+            </label>
+            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: '#666' }}>
+              {wordCount > 0 && (
+                <>
+                  <span>{wordCount.toLocaleString()} words</span>
+                  <span>•</span>
+                  <span>{formatReadingTime(readingTime)}</span>
+                </>
+              )}
+            </div>
+          </div>
           <RichTextEditor
             content={content}
             onChange={handleContentChange}
@@ -839,7 +925,25 @@ export default function EditPostPage() {
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+        {post && post.updatedAt && (
+          <div style={{ marginBottom: '1.5rem', padding: '0.75rem', background: '#f5f5f5', borderRadius: '6px', fontSize: '0.85rem', color: '#666' }}>
+            <strong>Last edited:</strong> {formatDate(post.updatedAt)} ({formatRelativeTime(post.updatedAt)})
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ fontSize: '0.75rem', color: '#999', marginRight: 'auto' }}>
+            <span>Shortcuts: </span>
+            <kbd style={{ padding: '0.2rem 0.4rem', background: '#f0f0f0', borderRadius: '3px', fontFamily: 'monospace' }}>⌘/Ctrl+S</kbd>
+            <span> to save</span>
+            {status === 'draft' && (
+              <>
+                <span>, </span>
+                <kbd style={{ padding: '0.2rem 0.4rem', background: '#f0f0f0', borderRadius: '3px', fontFamily: 'monospace' }}>⌘/Ctrl+K</kbd>
+                <span> to preview</span>
+              </>
+            )}
+          </div>
           {status === 'draft' && (
             <Link
               href={`${config.postRoute ? `/${config.postRoute}/${postSlug || slug}` : `/${postSlug || slug}`}?preview=true`}
@@ -855,6 +959,23 @@ export default function EditPostPage() {
               }}
             >
               Preview Draft
+            </Link>
+          )}
+          {(status === 'published' || status === 'scheduled') && post && (
+            <Link
+              href={`${config.postRoute ? `/${config.postRoute}/${postSlug || slug}` : `/${postSlug || slug}`}`}
+              target="_blank"
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: '#28a745',
+                color: 'white',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                textDecoration: 'none',
+                display: 'inline-block'
+              }}
+            >
+              View Post
             </Link>
           )}
           <Link

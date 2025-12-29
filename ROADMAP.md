@@ -161,9 +161,9 @@ This document outlines the planned features, improvements, and enhancements for 
 - [ ] Dark mode support
 - [ ] Improved mobile experience for admin panel
 
-**Status:** ✅ Partially complete - Core UI components and card design implemented. Loading states, error boundaries, and notifications are next priorities.
+**Status:** ✅ Mostly complete - Core UI components, loading states, keyboard shortcuts, and utility features implemented. Error boundaries and toast notifications are next priorities.
 
-**Estimated effort:** 2-3 days
+**Estimated effort:** 2-3 days (1 day remaining)
 
 ---
 
@@ -348,14 +348,14 @@ This document outlines the planned features, improvements, and enhancements for 
 - [x] Uniform card sizes with consistent text positioning
 - [x] Full background images with gradient overlays
 - [x] White background fallback for cards without images
-- [ ] Add loading skeletons
-- [ ] Improve error messages
-- [ ] Add keyboard navigation
-- [ ] Add copy-to-clipboard for slugs
-- [ ] Add post preview button
-- [ ] Add "last edited" timestamp
-- [ ] Add post word count
-- [ ] Add reading time estimate
+- [x] Add loading skeletons
+- [x] Improve error messages
+- [x] Add keyboard navigation
+- [x] Add copy-to-clipboard for slugs
+- [x] Add post preview button
+- [x] Add "last edited" timestamp
+- [x] Add post word count
+- [x] Add reading time estimate
 - [ ] Add social sharing buttons
 - [ ] Add print stylesheet
 
@@ -391,8 +391,9 @@ If you'd like to contribute to any of these features:
 - **v1.4.0** - Modern card design with uniform sizing, full background images, and gradient overlays
 - **v1.5.0** - Content sanitization, testing infrastructure, pre-commit hooks, comprehensive documentation
 - **v1.6.0** (Planned) - SEO enhancements, improved validation
-- **v2.0.0** (Current) - Categories and tags system, draft workflow (in progress)
-- **v2.1.0** (Planned) - RSS feed, pagination, UI/UX improvements
+- **v2.0.0** - Categories and tags system, draft workflow
+- **v2.1.0** (Current) - Quick wins & UX improvements (loading skeletons, keyboard shortcuts, word count, reading time, copy-to-clipboard, last edited tracking)
+- **v2.2.0** (Planned) - RSS feed, pagination, additional UI/UX improvements
 - **v3.0.0** (Planned) - Multi-user, OAuth, production features
 
 ---
@@ -400,6 +401,17 @@ If you'd like to contribute to any of these features:
 *Last updated: January 2025*
 
 ## Recent Updates
+
+### v2.1.0 - Quick Wins & UX Improvements (January 2025)
+- ✅ Loading skeletons with shimmer animation for admin dashboard
+- ✅ Improved error messages with better context and user-friendly text
+- ✅ Keyboard shortcuts (Cmd/Ctrl+S to save, Cmd/Ctrl+K to preview, Escape to cancel)
+- ✅ Copy-to-clipboard functionality for slugs with visual feedback
+- ✅ Enhanced post preview button (Preview for drafts, View Post for published)
+- ✅ Last edited timestamp tracking and display (updatedAt field)
+- ✅ Real-time word count display in post editor
+- ✅ Reading time estimate calculation and display (200 words/minute)
+- ✅ Utility functions for date formatting, clipboard operations, and text analysis
 
 ### v2.0.0 - Categories and Tags (January 2025)
 - ✅ Hierarchical category system with parent-child relationships

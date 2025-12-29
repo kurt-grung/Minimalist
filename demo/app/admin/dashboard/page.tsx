@@ -20,6 +20,7 @@ interface Post {
   author?: string
   status?: PostStatus
   scheduledDate?: string
+  updatedAt?: string
 }
 
 interface Locale {
@@ -221,11 +222,12 @@ export default function AdminDashboard() {
         loadPosts(locale || config.defaultLocale)
       } else {
         setDeleteModal({ isOpen: false, slug: null })
-        setErrorModal({ isOpen: true, message: 'Failed to delete post' })
+        const errorData = await response.json().catch(() => ({}))
+        setErrorModal({ isOpen: true, message: errorData.error || 'Failed to delete post. The post may not exist or you may not have permission to delete it.' })
       }
     } catch (err) {
       setDeleteModal({ isOpen: false, slug: null })
-      setErrorModal({ isOpen: true, message: 'Error deleting post' })
+        setErrorModal({ isOpen: true, message: 'Unable to delete post. Please check your connection and try again.' })
     }
   }
 
@@ -240,8 +242,102 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <main style={{ padding: '2rem', textAlign: 'center' }}>
-        <p>Loading...</p>
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+        <header style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginBottom: '2rem'
+        }}>
+          <div>
+            <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Admin Dashboard</h1>
+          </div>
+        </header>
+        <section>
+          <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Posts</h2>
+          <div style={{ display: 'grid', gap: '1rem' }}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  background: 'white',
+                  padding: '1.5rem',
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      height: '24px',
+                      width: '60%',
+                      background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+                      backgroundSize: '200% 100%',
+                      animation: 'shimmer 1.5s infinite',
+                      borderRadius: '4px',
+                      marginBottom: '0.5rem'
+                    }}
+                  />
+                  <div
+                    style={{
+                      height: '16px',
+                      width: '40%',
+                      background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+                      backgroundSize: '200% 100%',
+                      animation: 'shimmer 1.5s infinite',
+                      borderRadius: '4px'
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div
+                    style={{
+                      height: '36px',
+                      width: '60px',
+                      background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+                      backgroundSize: '200% 100%',
+                      animation: 'shimmer 1.5s infinite',
+                      borderRadius: '6px'
+                    }}
+                  />
+                  <div
+                    style={{
+                      height: '36px',
+                      width: '60px',
+                      background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+                      backgroundSize: '200% 100%',
+                      animation: 'shimmer 1.5s infinite',
+                      borderRadius: '6px'
+                    }}
+                  />
+                  <div
+                    style={{
+                      height: '36px',
+                      width: '60px',
+                      background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+                      backgroundSize: '200% 100%',
+                      animation: 'shimmer 1.5s infinite',
+                      borderRadius: '6px'
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+        <style jsx>{`
+          @keyframes shimmer {
+            0% {
+              background-position: -200% 0;
+            }
+            100% {
+              background-position: 200% 0;
+            }
+          }
+        `}</style>
       </main>
     )
   }
@@ -506,6 +602,11 @@ export default function AdminDashboard() {
                   </div>
                   <p style={{ color: '#666', fontSize: '0.9rem', margin: 0 }}>
                     {post.slug} • {new Date(post.date).toLocaleDateString()}
+                    {post.updatedAt && post.updatedAt !== post.date && (
+                      <span style={{ marginLeft: '0.5rem', color: '#999' }}>
+                        • Last edited: {new Date(post.updatedAt).toLocaleDateString()}
+                      </span>
+                    )}
                     {post.status === 'scheduled' && post.scheduledDate && (
                       <span style={{ marginLeft: '0.5rem', color: '#0070f3' }}>
                         • Scheduled: {new Date(post.scheduledDate).toLocaleDateString()}
@@ -603,7 +704,7 @@ export default function AdminDashboard() {
       <ConfirmModal
         isOpen={errorModal.isOpen}
         title="Error"
-        message={errorModal.message}
+        message={errorModal.message || 'An unexpected error occurred. Please try again.'}
         confirmText="OK"
         onConfirm={() => setErrorModal({ isOpen: false, message: '' })}
         onCancel={() => setErrorModal({ isOpen: false, message: '' })}

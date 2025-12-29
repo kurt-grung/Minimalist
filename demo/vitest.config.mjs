@@ -9,6 +9,7 @@ export default defineConfig({
     globals: true,
     environment: 'node', // Default to node, tests will set up jsdom if needed
     include: ['tests/**/*.test.ts'],
+    threads: process.env.VITEST_THREADS === 'false' ? false : true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

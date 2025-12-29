@@ -21,6 +21,11 @@ A minimal, file-based headless CMS for Next.js. No database required - content i
 - ✅ **Sitemap generation** - Automatic sitemap with multi-locale support
 - ✅ **Testing infrastructure** - Comprehensive unit tests with Vitest
 - ✅ **Pre-commit hooks** - Automated testing and build verification
+- ✅ **Loading skeletons** - Smooth loading states with shimmer animations
+- ✅ **Keyboard shortcuts** - Save (Cmd/Ctrl+S), preview (Cmd/Ctrl+K), and navigation shortcuts
+- ✅ **Word count & reading time** - Real-time word count and reading time estimates
+- ✅ **Last edited tracking** - Automatic timestamp tracking for post edits
+- ✅ **Copy-to-clipboard** - Quick copy functionality for slugs and URLs
 
 ## Project Structure
 
