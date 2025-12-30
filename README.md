@@ -2,6 +2,22 @@
 
 A minimal, file-based headless CMS. No database required - content is stored as files (JSON or Markdown with frontmatter).
 
+## Project Structure
+
+```
+minimalist/
+├── cms/                  # NPM Package
+│   ├── src/              # Source code
+│   ├── templates/        # Next.js templates
+│   └── package.json
+│
+└── demo/                 # Example/Demo project
+    ├── app/              # Next.js app directory
+    ├── lib/              # Library functions
+    ├── content/          # Content files (posts, pages)
+    └── package.json
+```
+
 ## Features
 
 - ✅ **File-based storage** - No database needed, content stored as JSON or Markdown files
@@ -29,22 +45,7 @@ A minimal, file-based headless CMS. No database required - content is stored as 
 - ✅ **RSS feed** - RSS 2.0 feed generation with category/tag filtering and multi-locale support
 - ✅ **Pagination** - Smart pagination with Previous/Next navigation and page numbers
 - ✅ **Draft/Publish workflow** - Draft, published, and scheduled post statuses with preview mode
-
-## Project Structure
-
-```
-minimalist/
-├── cms/                  # NPM Package
-│   ├── src/              # Source code
-│   ├── templates/        # Next.js templates
-│   └── package.json
-│
-└── demo/                 # Example/Demo project
-    ├── app/              # Next.js app directory
-    ├── lib/              # Library functions
-    ├── content/          # Content files (posts, pages)
-    └── package.json
-```
+- ✅ **GraphQL API** - Read-only GraphQL API with GraphiQL interface (development only)
 
 ## Quick Start
 
@@ -189,6 +190,45 @@ results.forEach(result => {
 })
 ```
 
+## GraphQL API
+
+Read-only GraphQL is available at `/api/graphql` in both the demo app and the Next.js template.
+
+- GraphiQL is enabled in development only.
+- Use `Authorization: Bearer <JWT>` for preview access to drafts/scheduled (demo only).
+
+Example query:
+
+```graphql
+query GetHome($locale: String) {
+  settings { siteTitle defaultLocale postRoute }
+  posts(locale: $locale, limit: 5) {
+    id
+    title
+    slug
+    excerpt
+    date
+  }
+}
+```
+
+Example curl:
+
+```bash
+curl -X POST http://localhost:3000/api/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query":"query($loc:String){ posts(locale:$loc){ id title slug } }","variables":{"loc":"en"}}'
+```
+
+Previewing drafts (demo only):
+
+```bash
+curl -X POST http://localhost:3000/api/graphql \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <JWT>" \
+  -d '{"query":"query($slug:String!){ post(slug:$slug, preview:true){ id title status } }","variables":{"slug":"my-draft"}}'
+```
+
 ## Architecture
 
 The project is organized as a monorepo with two main components:
@@ -219,6 +259,7 @@ The project is organized as a monorepo with two main components:
 - **Authentication:** JWT with bcryptjs
 - **Storage:** File-based (JSON/Markdown) with optional Vercel KV fallback
 - **Content Format:** JSON or Markdown with frontmatter
+- **GraphQL:** graphql-yoga for GraphQL API with GraphiQL interface
 
 ## Contributing
 

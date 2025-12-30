@@ -105,17 +105,22 @@ Or manually create the following API routes:
 #### `app/api/auth/login/route.ts`
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyPassword, generateToken } from 'minimalist'
+import { getUser, verifyPassword, createToken } from 'minimalist'
 
 export async function POST(request: NextRequest) {
   const { username, password } = await request.json()
   
-  const isValid = await verifyPassword(username, password)
+  const user = getUser(username)
+  if (!user) {
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+  }
+  
+  const isValid = verifyPassword(password, user.passwordHash)
   if (!isValid) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }
   
-  const token = generateToken(username)
+  const token = createToken(username)
   return NextResponse.json({ token })
 }
 ```

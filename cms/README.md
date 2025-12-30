@@ -165,13 +165,15 @@ const newConfig = updateConfig({
 ### Authentication
 
 ```typescript
-import { verifyPassword, generateToken, verifyToken } from 'minimalist'
+import { verifyPassword, createToken, verifyToken } from 'minimalist'
 
-// Verify password
-const isValid = await verifyPassword('admin', 'admin123')
+// Get user and verify password
+import { getUser, verifyPassword } from 'minimalist'
+const user = getUser('admin')
+const isValid = user ? verifyPassword('admin123', user.passwordHash) : false
 
 // Generate JWT token
-const token = generateToken('admin')
+const token = createToken('admin')
 
 // Verify token
 const payload = verifyToken(token)
@@ -248,11 +250,11 @@ Get a locale by its code.
 
 ### Authentication Functions
 
-#### `verifyPassword(username: string, password: string): Promise<boolean>`
-Verify a username and password. Returns `true` if valid.
+#### `verifyPassword(password: string, hash: string): boolean`
+Verify a password against a hash. Returns `true` if valid.
 
-#### `generateToken(username: string): string`
-Generate a JWT token for a user.
+#### `createToken(username: string): string`
+Create a JWT token for a user.
 
 #### `verifyToken(token: string): { username: string } | null`
 Verify a JWT token. Returns the payload if valid, `null` otherwise.

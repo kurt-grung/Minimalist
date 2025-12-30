@@ -21,6 +21,8 @@
     "@vercel/kv": "^1.0.0",
     "bcryptjs": "^2.4.3",
     "gray-matter": "^4.0.3",
+    "graphql": "^16.9.0",
+    "graphql-yoga": "^5.7.0",
     "minimalist": "file:../cms",
     "jsonwebtoken": "^9.0.2",
     "next": "^16.0.10",

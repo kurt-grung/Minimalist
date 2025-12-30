@@ -7,8 +7,7 @@ exports.init = init;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 async function init() {
-    const args = process.argv.slice(2);
-    const command = args[0];
+    const command = process.argv[2];
     if (command === 'init') {
         await initProject();
     }
@@ -287,7 +286,6 @@ async function initProject() {
         fs_1.default.writeFileSync(tsconfigPath, JSON.stringify(basicTsconfig, null, 2));
         console.log('✅ Created tsconfig.json with path alias configuration');
     }
-    console.log('\n✨ Setup complete!');
     // Check if minimalist is already in package.json (local dev or already installed)
     const hasPackage = packageJson.dependencies?.['minimalist'] || packageJson.devDependencies?.['minimalist'];
     console.log('\n✨ Setup complete!');

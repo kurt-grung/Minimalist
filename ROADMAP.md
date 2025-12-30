@@ -262,12 +262,14 @@ This document outlines the planned features, improvements, and enhancements for 
 
 #### 5.4 API Improvements
 - [ ] RESTful API documentation
-- [ ] GraphQL support (optional)
+- [x] GraphQL support (optional) ✅ COMPLETE
 - [ ] API rate limiting
 - [ ] API authentication
 - [ ] Webhook support
 
-**Estimated effort:** 4-5 days
+**Status:** ✅ GraphQL API complete - Read-only GraphQL API with GraphiQL interface (development only). Supports queries for posts, pages, categories, tags, search, and settings. Preview mode for drafts/scheduled posts with JWT authentication.
+
+**Estimated effort:** 4-5 days (GraphQL: 1 day completed)
 
 ---
 
@@ -406,7 +408,8 @@ If you'd like to contribute to any of these features:
 - **v2.0.0** - Categories and tags system, draft workflow
 - **v2.1.0** - Quick wins & UX improvements (loading skeletons, keyboard shortcuts, word count, reading time, copy-to-clipboard, last edited tracking)
 - **v2.2.0** - RSS feed, pagination, additional UI/UX improvements
-- **v2.3.0** (Current) - Draft/Publish workflow with scheduled publishing and preview mode
+- **v2.3.0** - Draft/Publish workflow with scheduled publishing and preview mode
+- **v2.4.0** (Current) - GraphQL API with GraphiQL interface
 - **v3.0.0** (Planned) - Multi-user, OAuth, production features
 
 ---
@@ -414,6 +417,15 @@ If you'd like to contribute to any of these features:
 *Last updated: January 2025*
 
 ## Recent Updates
+
+### v2.4.0 - GraphQL API (January 2025)
+- ✅ Read-only GraphQL API at `/api/graphql`
+- ✅ GraphiQL interface enabled in development only
+- ✅ Support for posts, pages, categories, tags, search, and settings queries
+- ✅ Preview mode for drafts/scheduled posts with JWT authentication
+- ✅ Custom GraphiQL title ("GraphQL API")
+- ✅ Production introspection guard for security
+- ✅ Available in both demo app and CMS template
 
 ### v2.3.0 - Draft/Publish Workflow (January 2025)
 - ✅ Draft status for posts (not visible on frontend)
