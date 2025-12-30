@@ -12,6 +12,16 @@ const nextConfig = {
     // Set root to monorepo root where Next.js is hoisted in node_modules
     root: path.resolve(__dirname, '..'),
   },
+  async rewrites() {
+    return [
+      // Proxy /images/* requests to /api/images/* to serve from Blob Storage in production
+      // Next.js will try static files first, then fall back to this rewrite
+      {
+        source: '/images/:filename*',
+        destination: '/api/images/:filename*',
+      },
+    ]
+  },
 }
 
 module.exports = nextConfig

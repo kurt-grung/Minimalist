@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import RichTextEditor from '@/components/RichTextEditor'
+import { processMarkdownInHtml } from '@/lib/markdown'
 import ConfirmModal from '@/components/ConfirmModal'
 import CopyButton from '@/components/CopyButton'
 import { getWordCount, getReadingTime, formatReadingTime, formatRelativeTime, formatDate } from '@/lib/utils'
@@ -86,6 +87,8 @@ export default function EditPostPage() {
   const [wordCount, setWordCount] = useState(0)
   const [readingTime, setReadingTime] = useState(0)
   const [showCopySuccess, setShowCopySuccess] = useState(false)
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean }>({ isOpen: false })
+  const [deleting, setDeleting] = useState(false)
   const router = useRouter()
   const userChangedLocale = useRef(false) // Track if user manually changed locale
   const formRef = useRef<HTMLFormElement>(null)
@@ -205,7 +208,11 @@ export default function EditPostPage() {
           setPost(foundPost)
           setTitle(foundPost.title)
           setPostSlug(foundPost.slug)
-          setContent(foundPost.content)
+          // Process content to convert any markdown syntax inside HTML tags to proper HTML
+          const processedContent = /<[^>]+>/.test(foundPost.content) 
+            ? processMarkdownInHtml(foundPost.content) 
+            : foundPost.content
+          setContent(processedContent)
           setExcerpt(foundPost.excerpt || '')
           setAuthor(foundPost.author || '')
           setStatus(foundPost.status || 'published')
@@ -414,6 +421,47 @@ export default function EditPostPage() {
       }
     } catch (err) {
       console.log('Draft saved to localStorage')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!post || !post.slug) return
+    
+    setDeleting(true)
+    try {
+      const token = localStorage.getItem('admin_token')
+      const currentLocale = locale || urlLocale || config.defaultLocale
+      
+      const deleteResponse = await fetch(`/api/posts/${post.slug}?locale=${currentLocale}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (!deleteResponse.ok) {
+        const data = await deleteResponse.json()
+        setDeleting(false)
+        setDeleteModal({ isOpen: false })
+        setErrorModal({
+          isOpen: true,
+          message: data.error || 'Failed to delete post. Please try again.'
+        })
+        return
+      }
+
+      // Clear draft from localStorage
+      localStorage.removeItem(`draft_${post.slug}`)
+      
+      // Redirect to dashboard
+      router.push(`/admin/dashboard?locale=${currentLocale}`)
+    } catch (err) {
+      setDeleting(false)
+      setDeleteModal({ isOpen: false })
+      setErrorModal({
+        isOpen: true,
+        message: 'An error occurred while deleting the post. Please try again.'
+      })
     }
   }
 
@@ -948,6 +996,24 @@ export default function EditPostPage() {
               </>
             )}
           </div>
+          {post && post.slug && (
+            <button
+              type="button"
+              onClick={() => setDeleteModal({ isOpen: true })}
+              disabled={deleting}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: deleting ? '#ccc' : '#dc3545',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                cursor: deleting ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </button>
+          )}
           {status === 'draft' && (
             <Link
               href={`${config.postRoute ? `/${config.postRoute}/${postSlug || slug}` : `/${postSlug || slug}`}?preview=true`}
@@ -1036,6 +1102,17 @@ export default function EditPostPage() {
           }
         }}
         variant="info"
+      />
+
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        title="Delete Post"
+        message={`Are you sure you want to delete "${post?.title || postSlug}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteModal({ isOpen: false })}
+        variant="danger"
       />
     </main>
   )

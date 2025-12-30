@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { highlightCodeBlocks } from './syntaxHighlighter'
 import ImageSelector from './ImageSelector'
+import { processMarkdownInHtml, markdownToHtml as libMarkdownToHtml } from '@/lib/markdown'
 
 interface RichTextEditorProps {
   content: string
@@ -56,7 +57,11 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
     }
     
     if (editorRef.current && !isMarkdownMode) {
-      const decoded = decodeContentForEditor(content)
+      let decoded = decodeContentForEditor(content)
+      // Process content to convert any markdown syntax inside HTML tags to proper HTML
+      if (/<[^>]+>/.test(decoded)) {
+        decoded = processMarkdownInHtml(decoded)
+      }
       const normalized = normalizeContent(decoded)
       const currentHtml = editorRef.current.innerHTML
       
@@ -236,8 +241,126 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
 
   const formatBold = () => execCommand('bold')
   const formatItalic = () => execCommand('italic')
-  const formatHeading = (level: number) => execCommand('formatBlock', `h${level}`)
-  const formatParagraph = () => execCommand('formatBlock', 'p')
+  const formatHeading = (level: number) => {
+    const selection = window.getSelection()
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0)
+      const selectedText = range.toString().trim()
+      
+      if (selectedText) {
+        // If text is selected, we need to replace the containing block with a heading
+        // Find the containing block element (p, div, etc.)
+        let container: Node | null = range.commonAncestorContainer
+        if (container.nodeType === Node.TEXT_NODE && container.parentElement) {
+          container = container.parentElement
+        }
+        
+        // Find the block-level parent
+        while (container && container !== editorRef.current) {
+          if (container.nodeType === Node.ELEMENT_NODE) {
+            const element = container as Element
+            const tagName = element.tagName?.toLowerCase()
+            
+            // If we're already in a heading, preserve all content (don't replace with just selected text)
+            if (tagName && ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName)) {
+              const currentLevel = parseInt(tagName.substring(1))
+              // If same level, keep the heading as-is (don't change anything)
+              if (currentLevel === level) {
+                // Just restore the selection without changing anything
+                const newRange = document.createRange()
+                newRange.selectNodeContents(element)
+                selection.removeAllRanges()
+                selection.addRange(newRange)
+              } else {
+                // Change heading level but keep all content
+                const newHeadingTag = `h${level}`
+                const newHeading = document.createElement(newHeadingTag)
+                newHeading.innerHTML = element.innerHTML
+                element.replaceWith(newHeading)
+                
+                // Restore selection
+                const newRange = document.createRange()
+                newRange.selectNodeContents(newHeading)
+                selection.removeAllRanges()
+                selection.addRange(newRange)
+              }
+              handleContentChange()
+              return
+            }
+            
+            // For other block elements (p, div, blockquote), replace with heading
+            if (tagName && ['p', 'div', 'blockquote'].includes(tagName)) {
+              const headingTag = `h${level}`
+              const heading = document.createElement(headingTag)
+              heading.textContent = selectedText
+              element.replaceWith(heading)
+              
+              // Set cursor after the heading
+              const newRange = document.createRange()
+              newRange.setStartAfter(heading)
+              newRange.collapse(true)
+              selection.removeAllRanges()
+              selection.addRange(newRange)
+              
+              handleContentChange()
+              return
+            }
+          }
+          container = container.parentElement || container.parentNode
+        }
+        
+        // Fallback: wrap selected text in heading
+        const headingTag = `h${level}`
+        document.execCommand('insertHTML', false, `<${headingTag}>${selectedText}</${headingTag}>`)
+      } else {
+        // If no text selected, format the current block
+        execCommand('formatBlock', `h${level}`)
+      }
+    } else {
+      // Fallback to formatBlock
+      execCommand('formatBlock', `h${level}`)
+    }
+    handleContentChange()
+  }
+  const formatParagraph = () => {
+    const selection = window.getSelection()
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0)
+      let container: Node | null = range.commonAncestorContainer
+      if (container.nodeType === Node.TEXT_NODE && container.parentElement) {
+        container = container.parentElement
+      }
+      
+      // Find the block-level parent
+      while (container && container !== editorRef.current) {
+        if (container.nodeType === Node.ELEMENT_NODE) {
+          const element = container as Element
+          const tagName = element.tagName?.toLowerCase()
+          
+          // If we're in a heading, convert it to paragraph
+          if (tagName && ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName)) {
+            const p = document.createElement('p')
+            p.innerHTML = element.innerHTML
+            element.replaceWith(p)
+            
+            // Restore selection
+            const newRange = document.createRange()
+            newRange.selectNodeContents(p)
+            selection.removeAllRanges()
+            selection.addRange(newRange)
+            
+            handleContentChange()
+            return
+          }
+        }
+        container = container.parentElement || container.parentNode
+      }
+    }
+    
+    // Fallback to formatBlock
+    execCommand('formatBlock', 'p')
+    handleContentChange()
+  }
   const formatBlockquote = () => execCommand('formatBlock', 'blockquote')
   const formatCode = () => {
     const selection = window.getSelection()
@@ -430,174 +553,8 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
   }
 
   // Markdown to HTML converter
-  const markdownToHtml = (md: string): string => {
-    if (!md) return ''
-    
-    // Split into lines for better processing
-    const lines = md.split('\n')
-    const blocks: string[] = []
-    let inCodeBlock = false
-    let codeBlockLang = ''
-    let codeBlockContent: string[] = []
-    let inList = false
-    let listType: 'ul' | 'ol' | null = null
-    let listItems: string[] = []
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
-      
-      // Handle code blocks
-      if (line.match(/^```(\w+)?$/)) {
-        if (inCodeBlock) {
-          // Close code block
-          blocks.push(`<pre><code class="language-${codeBlockLang || 'text'}">${codeBlockContent.join('\n')}</code></pre>`)
-          codeBlockContent = []
-          codeBlockLang = ''
-          inCodeBlock = false
-        } else {
-          // Open code block
-          codeBlockLang = line.match(/^```(\w+)?$/)?.[1] || ''
-          inCodeBlock = true
-        }
-        continue
-      }
-      
-      if (inCodeBlock) {
-        codeBlockContent.push(line)
-        continue
-      }
-      
-      // Close list if needed
-      if (inList && !line.match(/^[\d-]\.?\s/) && line.trim() !== '') {
-        const listTag = listType === 'ol' ? 'ol' : 'ul'
-        blocks.push(`<${listTag}>${listItems.map(item => `<li>${item}</li>`).join('')}</${listTag}>`)
-        listItems = []
-        inList = false
-        listType = null
-      }
-      
-      // Headings
-      if (line.match(/^######\s/)) {
-        blocks.push(`<h6>${line.replace(/^######\s/, '')}</h6>`)
-        continue
-      }
-      if (line.match(/^#####\s/)) {
-        blocks.push(`<h5>${line.replace(/^#####\s/, '')}</h5>`)
-        continue
-      }
-      if (line.match(/^####\s/)) {
-        blocks.push(`<h4>${line.replace(/^####\s/, '')}</h4>`)
-        continue
-      }
-      if (line.match(/^###\s/)) {
-        blocks.push(`<h3>${line.replace(/^###\s/, '')}</h3>`)
-        continue
-      }
-      if (line.match(/^##\s/)) {
-        blocks.push(`<h2>${line.replace(/^##\s/, '')}</h2>`)
-        continue
-      }
-      if (line.match(/^#\s/)) {
-        blocks.push(`<h1>${line.replace(/^#\s/, '')}</h1>`)
-        continue
-      }
-      
-      // Blockquotes
-      if (line.match(/^>\s/)) {
-        blocks.push(`<blockquote>${line.replace(/^>\s/, '')}</blockquote>`)
-        continue
-      }
-      
-      // Ordered lists
-      if (line.match(/^\d+\.\s/)) {
-        if (!inList || listType !== 'ol') {
-          if (inList) {
-            const listTag = listType === 'ol' ? 'ol' : 'ul'
-            blocks.push(`<${listTag}>${listItems.map(item => `<li>${item}</li>`).join('')}</${listTag}>`)
-            listItems = []
-          }
-          inList = true
-          listType = 'ol'
-        }
-        listItems.push(line.replace(/^\d+\.\s/, ''))
-        continue
-      }
-      
-      // Unordered lists
-      if (line.match(/^-\s/) || line.match(/^\*\s/)) {
-        if (!inList || listType !== 'ul') {
-          if (inList) {
-            const listTag = listType === 'ol' ? 'ol' : 'ul'
-            blocks.push(`<${listTag}>${listItems.map(item => `<li>${item}</li>`).join('')}</${listTag}>`)
-            listItems = []
-          }
-          inList = true
-          listType = 'ul'
-        }
-        listItems.push(line.replace(/^[-*]\s/, ''))
-        continue
-      }
-      
-      // Images (markdown syntax: ![alt](url))
-      if (line.match(/!\[.*?\]\(.*?\)/)) {
-        blocks.push(line)
-        continue
-      }
-      
-      // Regular paragraph
-      if (line.trim() !== '') {
-        blocks.push(`<p>${line}</p>`)
-      } else if (blocks.length > 0) {
-        // Empty line - add paragraph break
-        blocks.push('<br>')
-      }
-    }
-    
-    // Close any open code block
-    if (inCodeBlock) {
-      blocks.push(`<pre><code class="language-${codeBlockLang || 'text'}">${codeBlockContent.join('\n')}</code></pre>`)
-    }
-    
-    // Close any open list
-    if (inList && listType) {
-      const listTag = listType === 'ol' ? 'ol' : 'ul'
-      blocks.push(`<${listTag}>${listItems.map(item => `<li>${item}</li>`).join('')}</${listTag}>`)
-    }
-    
-    let html = blocks.join('')
-    
-    // Process inline formatting (must be done after block-level processing)
-    // Images (must come before links to avoid conflicts)
-    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto;" />')
-    
-    // Inline code (avoid matching code blocks)
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
-    
-    // Links
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-    
-    // Bold (must come before italic to avoid conflicts)
-    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    
-    // Italic (only if not already bold)
-    html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
-    
-    // Clean up empty paragraphs and breaks
-    html = html.replace(/<p><\/p>/g, '')
-    html = html.replace(/<p>(<h[1-6]>)/g, '$1')
-    html = html.replace(/(<\/h[1-6]>)<\/p>/g, '$1')
-    html = html.replace(/<p>(<blockquote>)/g, '$1')
-    html = html.replace(/(<\/blockquote>)<\/p>/g, '$1')
-    html = html.replace(/<p>(<ul>)/g, '$1')
-    html = html.replace(/(<\/ul>)<\/p>/g, '$1')
-    html = html.replace(/<p>(<ol>)/g, '$1')
-    html = html.replace(/(<\/ol>)<\/p>/g, '$1')
-    html = html.replace(/<p>(<pre>)/g, '$1')
-    html = html.replace(/(<\/pre>)<\/p>/g, '$1')
-    html = html.replace(/<br><br>/g, '<br>')
-    
-    return html || '<p></p>'
-  }
+  // Use library version for consistency - it has better paragraph handling
+  const markdownToHtml = libMarkdownToHtml
 
   // Toggle markdown mode
   const toggleMarkdown = () => {
@@ -635,13 +592,17 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
         setMarkdownContent(md)
       } else if (!markdownContent) {
         // If editor not ready, convert from content prop
-        const decoded = decodeContentForEditor(content)
+        let decoded = decodeContentForEditor(content)
+        // Process content to convert any markdown syntax inside HTML tags to proper HTML first
+        if (/<[^>]+>/.test(decoded)) {
+          decoded = processMarkdownInHtml(decoded)
+        }
         const md = htmlToMarkdown(decoded)
         setMarkdownContent(md)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMarkdownMode])
+  }, [isMarkdownMode, content])
 
   const handleMarkdownChange = (value: string) => {
     setMarkdownContent(value)
@@ -721,6 +682,18 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
               >
                 H3
               </button>
+              <button
+                type="button"
+                onClick={formatParagraph}
+                className={`p-2 rounded border border-gray-300 cursor-pointer text-sm transition-colors ${
+                  !activeFormats.heading 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-white text-gray-800 hover:bg-gray-100'
+                }`}
+                title="Paragraph"
+              >
+                P
+              </button>
             </div>
 
             {/* Lists */}
@@ -755,7 +728,7 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
             <button
               type="button"
               onClick={formatBlockquote}
-              className={`p-2 mr-2 pr-3 border-r border-gray-300 rounded border border-gray-300 cursor-pointer text-sm transition-colors ${
+              className={`p-2 mr-2 pr-3 border-r rounded border border-gray-300 cursor-pointer text-sm transition-colors ${
                 activeFormats.blockquote 
                   ? 'bg-blue-600 text-white' 
                   : 'bg-white text-gray-800 hover:bg-gray-100'
@@ -769,7 +742,7 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
             <button
               type="button"
               onClick={formatCode}
-              className={`p-2 mr-2 pr-3 border-r border-gray-300 rounded border border-gray-300 cursor-pointer text-sm font-mono transition-colors ${
+              className={`p-2 mr-2 pr-3 border-r rounded border border-gray-300 cursor-pointer text-sm font-mono transition-colors ${
                 activeFormats.code 
                   ? 'bg-blue-600 text-white' 
                   : 'bg-white text-gray-800 hover:bg-gray-100'
@@ -783,7 +756,7 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
             <button
               type="button"
               onClick={formatCodeBlock}
-              className="p-2 mr-2 pr-3 border-r border-gray-300 rounded border border-gray-300 cursor-pointer text-sm font-mono bg-white text-gray-800 hover:bg-gray-100 transition-colors"
+              className="p-2 mr-2 pr-3 border-r rounded border border-gray-300 cursor-pointer text-sm font-mono bg-white text-gray-800 hover:bg-gray-100 transition-colors"
               title="Code Block"
             >
               {'{ }'}
@@ -793,7 +766,7 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
             <button
               type="button"
               onClick={insertLink}
-              className={`p-2 mr-2 pr-3 border-r border-gray-300 rounded border border-gray-300 cursor-pointer text-sm transition-colors ${
+              className={`p-2 mr-2 pr-3 border-r rounded border border-gray-300 cursor-pointer text-sm transition-colors ${
                 activeFormats.link 
                   ? 'bg-blue-600 text-white' 
                   : 'bg-white text-gray-800 hover:bg-gray-100'
@@ -807,7 +780,7 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
             <button
               type="button"
               onClick={() => setShowImageSelector(true)}
-              className="p-2 mr-2 pr-3 border-r border-gray-300 rounded border border-gray-300 cursor-pointer text-sm bg-white text-gray-800 hover:bg-gray-100 transition-colors"
+              className="p-2 mr-2 pr-3 border-r rounded border border-gray-300 cursor-pointer text-sm bg-white text-gray-800 hover:bg-gray-100 transition-colors"
               title="Insert Image"
             >
               🖼️
@@ -886,8 +859,39 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
           text-decoration: underline;
         }
         .cms-editor ul, .cms-editor ol {
-          margin: 0.5rem 0;
-          padding-left: 2rem;
+          margin: 0.5rem 0 !important;
+          padding-left: 0 !important;
+          list-style: none !important;
+        }
+        .cms-editor ul li {
+          margin: 0.25rem 0 !important;
+          padding-left: 1.5rem !important;
+          position: relative !important;
+          display: block !important;
+        }
+        .cms-editor ul li::before {
+          content: "•" !important;
+          position: absolute !important;
+          left: 0.5rem !important;
+          color: #333 !important;
+          font-weight: bold !important;
+        }
+        .cms-editor ol {
+          counter-reset: list-counter !important;
+        }
+        .cms-editor ol li {
+          margin: 0.25rem 0 !important;
+          padding-left: 1.5rem !important;
+          position: relative !important;
+          display: block !important;
+          counter-increment: list-counter !important;
+        }
+        .cms-editor ol li::before {
+          content: counter(list-counter) "." !important;
+          position: absolute !important;
+          left: 0 !important;
+          color: #333 !important;
+          font-weight: normal !important;
         }
         .cms-editor h1, .cms-editor h2, .cms-editor h3 {
           margin: 1rem 0 0.5rem 0;

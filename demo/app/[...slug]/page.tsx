@@ -6,6 +6,7 @@ import Footer from '@/components/Footer'
 import EditButton from '@/components/EditButton'
 import LocaleSelector from '@/components/LocaleSelector'
 import SafeHtml from '@/components/SafeHtml'
+import { markdownToHtml, processMarkdownInHtml } from '@/lib/markdown'
 
 export async function generateStaticParams() {
   const config = getConfig()
@@ -437,25 +438,15 @@ export default async function DynamicContentPage({
             </div>
           </header>
 
-          {post.content && /<[^>]+>/.test(post.content) ? (
+          {post.content && (
             <SafeHtml 
-              html={post.content}
+              html={/<[^>]+>/.test(post.content) ? processMarkdownInHtml(post.content) : markdownToHtml(post.content)}
               className="prose prose-lg max-w-none"
               style={{ 
                 lineHeight: '1.8',
                 fontSize: '1.1rem'
               }}
             />
-          ) : (
-            <div 
-              style={{ 
-                lineHeight: '1.8',
-                fontSize: '1.1rem',
-                whiteSpace: 'pre-wrap'
-              }}
-            >
-              {post.content}
-            </div>
           )}
 
           {/* Categories and Tags at bottom */}

@@ -135,8 +135,15 @@ export default function TagsPage() {
 
     try {
       const token = localStorage.getItem('admin_token')
+      if (!token) {
+        setErrorModal({ isOpen: true, message: 'Not authenticated. Please log in again.' })
+        setDeleteModal({ isOpen: false, slug: null })
+        router.push('/admin')
+        return
+      }
+      
       const deleteLocale = deleteModal.locale || locale || config.defaultLocale
-      const response = await fetch(`/api/tags/${deleteModal.slug}?locale=${deleteLocale}`, {
+      const response = await fetch(`/api/tags/${encodeURIComponent(deleteModal.slug)}?locale=${deleteLocale}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -147,12 +154,20 @@ export default function TagsPage() {
         setDeleteModal({ isOpen: false, slug: null })
         loadTags(locale || config.defaultLocale)
       } else {
+        const data = await response.json()
+        const errorMsg = data.error || data.details || 'Failed to delete tag'
         setDeleteModal({ isOpen: false, slug: null })
-        setErrorModal({ isOpen: true, message: 'Failed to delete tag' })
+        setErrorModal({ isOpen: true, message: errorMsg })
+        // If token is invalid, redirect to login
+        if (response.status === 401) {
+          localStorage.removeItem('admin_token')
+          setTimeout(() => router.push('/admin'), 2000)
+        }
       }
     } catch (err) {
+      console.error('Error deleting tag:', err)
       setDeleteModal({ isOpen: false, slug: null })
-      setErrorModal({ isOpen: true, message: 'Error deleting tag' })
+      setErrorModal({ isOpen: true, message: 'Error deleting tag: ' + (err instanceof Error ? err.message : 'Unknown error') })
     }
   }
 
@@ -176,11 +191,17 @@ export default function TagsPage() {
   const handleSaveTag = async (tag: Tag) => {
     try {
       const token = localStorage.getItem('admin_token')
+      if (!token) {
+        setErrorModal({ isOpen: true, message: 'Not authenticated. Please log in again.' })
+        router.push('/admin')
+        return
+      }
+      
       const localeToUse = tag.locale || locale || config.defaultLocale
       
       const method = tag.id ? 'PUT' : 'POST'
       const url = tag.id 
-        ? `/api/tags/${tag.slug}?locale=${localeToUse}`
+        ? `/api/tags/${encodeURIComponent(tag.slug)}?locale=${localeToUse}`
         : `/api/tags`
       
       const response = await fetch(url, {
@@ -200,10 +221,17 @@ export default function TagsPage() {
         loadTags(localeToUse)
       } else {
         const data = await response.json()
-        setErrorModal({ isOpen: true, message: data.error || 'Failed to save tag' })
+        const errorMsg = data.error || data.details || 'Failed to save tag'
+        setErrorModal({ isOpen: true, message: errorMsg })
+        // If token is invalid, redirect to login
+        if (response.status === 401) {
+          localStorage.removeItem('admin_token')
+          setTimeout(() => router.push('/admin'), 2000)
+        }
       }
     } catch (err) {
-      setErrorModal({ isOpen: true, message: 'Error saving tag' })
+      console.error('Error saving tag:', err)
+      setErrorModal({ isOpen: true, message: 'Error saving tag: ' + (err instanceof Error ? err.message : 'Unknown error') })
     }
   }
 

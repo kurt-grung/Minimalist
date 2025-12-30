@@ -1,0 +1,17 @@
+{
+  "id": "post-minimalist-cms",
+  "title": "Introducing Minimalist CMS",
+  "slug": "minimalist-cms",
+  "content": "<p>Introducing Minimalist CMS: A Lightweight, No bloat, Database-Free Content Management System. </p><p><br></p><p><b>Open Source & Free</b> <span style=\"font-size: 1rem;\">Minimalist CMS is completely free and open source. </span><a href=\"https://github.com/kurt-grung/Minimalist\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"font-size: 1rem;\">https://github.com/kurt-grung/Minimalist</a></p><p><br></p><pre class=\"cms-syntax\"><code class=\"language-javascript\"><span class=\"cms-syntax-identifier\">npm</span><span class=\"cms-syntax-whitespace\"> </span><span class=\"cms-syntax-identifier\">install</span><span class=\"cms-syntax-whitespace\"> </span><span class=\"cms-syntax-identifier\">minimalist</span><span class=\"cms-syntax-whitespace\">\n</span><span class=\"cms-syntax-identifier\">npx</span><span class=\"cms-syntax-whitespace\"> </span><span class=\"cms-syntax-identifier\">minimalist</span><span class=\"cms-syntax-whitespace\"> </span><span class=\"cms-syntax-identifier\">init</span><span class=\"cms-syntax-whitespace\">\n</span><span class=\"cms-syntax-identifier\">npm</span><span class=\"cms-syntax-whitespace\"> </span><span class=\"cms-syntax-identifier\">run</span><span class=\"cms-syntax-whitespace\"> </span><span class=\"cms-syntax-identifier\">dev</span></code></pre><h2>Perfect For</h2><ul><li>Personal blogs and portfolios</li><li>Documentation sites</li><li>Small business websites</li><li>Any project that needs content management without database overhead</li></ul><h2>Built With Modern Tech</h2><p>Minimalist CMS is built with:</p><ul><li>JavaScript</li><li>TypeScript</li><li>Tailwind CSS</li><li>Vitest</li><li>Next.js 16+ supported</li></ul><p>Whether you're building a simple blog or a complex multi-lingual site, Minimalist CMS provides the flexibility and simplicity you need.</p><p>Give it a try and let me know what you think!</p><img src=\"/images/1766957102893-image.png\" alt=\"\" style=\"max-width: 100%; height: auto;\">",
+  "excerpt": "A lightweight, file-based headless CMS with no database required. Supports multi-lingual content, REST & GraphQL APIs, and works perfectly with static site generators.",
+  "date": "2025-12-31T02:00:13.000Z",
+  "author": "",
+  "status": "published",
+  "categories": [
+    "posts"
+  ],
+  "tags": [
+    "posts"
+  ],
+  "updatedAt": "2025-12-31T15:26:45.814Z"
+}

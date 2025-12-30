@@ -69,6 +69,16 @@ export async function getAllPosts(locale?: string, includeDrafts: boolean = fals
       status: post.status || 'published'
     }))
     
+    // Deduplicate posts by ID (in case both .json and .md files exist for the same slug)
+    const seenIds = new Set<string>()
+    filteredPosts = filteredPosts.filter(post => {
+      if (seenIds.has(post.id)) {
+        return false
+      }
+      seenIds.add(post.id)
+      return true
+    })
+    
     // Filter by status if not including drafts
     if (!includeDrafts) {
       filteredPosts = filteredPosts.filter(post => {
@@ -508,12 +518,89 @@ export async function saveTag(tag: Tag, locale?: string): Promise<boolean> {
   }
 }
 
+// Remove tag from all posts that reference it
+async function removeTagFromPosts(tagSlug: string, locale?: string): Promise<void> {
+  try {
+    // Get all posts that use this tag (including drafts and scheduled)
+    const posts = await getPostsByTag(tagSlug, locale, true, true)
+    
+    for (const post of posts) {
+      try {
+        // Remove the tag from the post's tags array
+        if (post.tags && post.tags.includes(tagSlug)) {
+          post.tags = post.tags.filter(t => t !== tagSlug)
+          
+          // Determine if post is markdown or JSON by checking which file exists
+          let useMarkdown = false
+          
+          if (locale) {
+            // Check locale-specific path
+            const mdPath = `content/posts/${locale}/${post.slug}.md`
+            useMarkdown = await storageExists(mdPath)
+          } else {
+            // Check legacy format (no locale)
+            const mdPath = `content/posts/${post.slug}.md`
+            useMarkdown = await storageExists(mdPath)
+          }
+          
+          // Save the updated post with the same locale and format
+          const saved = await savePost(post, locale, useMarkdown)
+          if (!saved) {
+            console.warn(`Failed to save post ${post.slug} after removing tag ${tagSlug}`)
+          }
+        }
+      } catch (postError) {
+        console.error(`Error processing post ${post.slug} for tag removal:`, postError)
+        // Continue with other posts even if one fails
+      }
+    }
+  } catch (error) {
+    console.error('Error removing tag from posts:', error)
+    // Don't throw - we still want to delete the tag even if updating posts fails
+  }
+}
+
 export async function deleteTag(slug: string, locale?: string): Promise<boolean> {
   try {
+    // Check if tag exists first
+    const tag = await getTagBySlug(slug, locale)
+    if (!tag) {
+      console.log(`Tag ${slug} not found (locale: ${locale || 'none'})`)
+      return false // Tag not found
+    }
+    
     const path = locale ? `content/tags/${locale}/${slug}.json` : `content/tags/${slug}.json`
-    return await storageDelete(path)
+    
+    // Verify file exists before attempting deletion
+    const fileExists = await storageExists(path)
+    if (!fileExists) {
+      console.log(`Tag file ${path} does not exist`)
+      return false
+    }
+    
+    // Remove the tag from all posts that reference it
+    // This is done before deletion so we can still reference the tag if needed
+    try {
+      await removeTagFromPosts(slug, locale)
+    } catch (removeError) {
+      console.error('Error removing tag from posts (continuing with deletion):', removeError)
+      // Continue with deletion even if removing from posts fails
+    }
+    
+    // Then delete the tag file
+    const deleted = await storageDelete(path)
+    
+    if (!deleted) {
+      console.error(`Failed to delete tag file: ${path}`)
+      return false
+    }
+    
+    return true
   } catch (error) {
     console.error('Error deleting tag:', error)
+    if (error instanceof Error) {
+      console.error('Error details:', error.message, error.stack)
+    }
     return false
   }
 }

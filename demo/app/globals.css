@@ -104,8 +104,11 @@ input, textarea {
 }
 
 .prose p {
-  margin-top: 1.25em;
-  margin-bottom: 1.25em;
+  line-height: 1.5;
+}
+
+.prose br {
+  line-height: 1.2;
 }
 
 .prose a {
@@ -173,10 +176,17 @@ input, textarea {
   font-weight: 400;
   font-size: 0.875em;
   line-height: 1.7142857;
-  margin-top: 1.7142857em;
-  margin-bottom: 1.7142857em;
   border-radius: 0.375rem;
   padding: 0.8571429em 1.1428571em;
+  white-space: pre;
+  font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
+}
+
+.prose pre.cms-syntax {
+  background-color: #1f2937;
+  color: #e5e7eb;
+  white-space: pre;
+  font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
 }
 
 .prose pre code {
@@ -189,6 +199,10 @@ input, textarea {
   font-size: inherit;
   font-family: inherit;
   line-height: inherit;
+  display: block;
+  overflow-x: auto;
+  white-space: pre;
+  font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
 }
 
 .prose pre code::before,
@@ -196,24 +210,77 @@ input, textarea {
   content: none;
 }
 
-/* Syntax highlighting for code blocks */
-.prose pre code {
-  display: block;
-  overflow-x: auto;
-  padding: 0;
+/* Ensure syntax highlighting spans inherit proper colors and preserve whitespace */
+.prose pre code .cms-syntax-identifier,
+.prose pre code .cms-syntax-text {
+  color: #e5e7eb;
+  white-space: pre;
+}
+
+.prose pre code .cms-syntax-whitespace {
+  color: #e5e7eb;
+  white-space: pre;
+}
+
+.prose pre code .cms-syntax-operator {
+  color: #9ca3af;
+  white-space: pre;
+}
+
+/* Ensure all syntax spans preserve whitespace and don't collapse */
+.prose pre code span {
+  white-space: pre;
+  display: inline;
 }
 
 /* Custom syntax highlighting styles */
 @layer components {
   .cms-syntax {
     @apply block overflow-x-auto p-2 bg-gray-900 text-gray-300;
+    white-space: pre;
+  }
+  
+  .cms-syntax code {
+    white-space: pre;
   }
 
+  /* Base text color for code blocks */
+  .cms-syntax code,
+  .cms-syntax pre {
+    @apply text-gray-300;
+  }
+
+  /* Identifiers (variable names, function names, etc.) */
+  .cms-syntax-identifier,
+  .cms-syntax-text {
+    @apply text-gray-300;
+    white-space: pre;
+  }
+
+  /* Whitespace - use default text color and preserve spacing */
+  .cms-syntax-whitespace {
+    @apply text-gray-300;
+    white-space: pre;
+  }
+
+  /* Operators and punctuation */
+  .cms-syntax-operator {
+    @apply text-gray-400;
+    white-space: pre;
+  }
+  
+  /* All syntax spans should preserve whitespace */
+  .cms-syntax span {
+    white-space: pre;
+  }
+
+  /* Comments */
   .cms-syntax-comment,
   .cms-syntax-quote {
     @apply text-green-600 italic;
   }
 
+  /* Keywords */
   .cms-syntax-keyword,
   .cms-syntax-selector-tag,
   .cms-syntax-built_in,
@@ -222,6 +289,7 @@ input, textarea {
     @apply text-blue-400;
   }
 
+  /* Strings */
   .cms-syntax-string,
   .cms-syntax-title,
   .cms-syntax-section,
@@ -234,6 +302,7 @@ input, textarea {
     @apply text-orange-400;
   }
 
+  /* Other syntax elements */
   .cms-syntax-deletion,
   .cms-syntax-selector-id,
   .cms-syntax-selector-class {
@@ -256,6 +325,7 @@ input, textarea {
     @apply text-yellow-200;
   }
 
+  /* Numbers */
   .cms-syntax-number {
     @apply text-green-300;
   }
@@ -271,5 +341,110 @@ input, textarea {
   .cms-syntax-strong {
     @apply font-bold;
   }
+}
+
+/* Rich Text Editor List Styles */
+.cms-editor ul,
+.cms-editor ol {
+  margin: 0.5rem 0 !important;
+  padding-left: 0 !important;
+  list-style: none !important;
+}
+
+.cms-editor ul li {
+  margin: 0.25rem 0 !important;
+  padding-left: 1.5rem !important;
+  position: relative !important;
+  display: block !important;
+}
+
+.cms-editor ul li::before {
+  content: "•" !important;
+  position: absolute !important;
+  left: 0.5rem !important;
+  color: #333 !important;
+  font-weight: bold !important;
+  display: inline-block !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+.cms-editor ol {
+  counter-reset: list-counter !important;
+}
+
+.cms-editor ol li {
+  margin: 0.25rem 0 !important;
+  padding-left: 1.5rem !important;
+  position: relative !important;
+  display: block !important;
+  counter-increment: list-counter !important;
+}
+
+.cms-editor ol li::before {
+  content: counter(list-counter) "." !important;
+  position: absolute !important;
+  left: 0 !important;
+  color: #333 !important;
+  font-weight: normal !important;
+  display: inline-block !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+/* Rich Text Editor Heading Styles */
+.cms-editor h1,
+.cms-editor h2,
+.cms-editor h3,
+.cms-editor h4,
+.cms-editor h5,
+.cms-editor h6 {
+  margin: 1rem 0 0.5rem 0 !important;
+  font-weight: bold !important;
+  display: block !important;
+  line-height: 1.2 !important;
+}
+
+.cms-editor h1 {
+  font-size: 2em !important;
+}
+
+.cms-editor h2 {
+  font-size: 1.5em !important;
+}
+
+.cms-editor h3 {
+  font-size: 1.25em !important;
+}
+
+.cms-editor h4 {
+  font-size: 1.1em !important;
+}
+
+.cms-editor h5 {
+  font-size: 1em !important;
+}
+
+.cms-editor h6 {
+  font-size: 0.9em !important;
+}
+
+/* Rich Text Editor Link Styles */
+.cms-editor a {
+  color: #0070f3 !important;
+  text-decoration: underline !important;
+  cursor: pointer !important;
+}
+
+.cms-editor a:hover {
+  color: #0051cc !important;
+}
+
+/* Rich Text Editor Image Styles */
+.cms-editor img {
+  max-width: 100% !important;
+  height: auto !important;
+  display: block !important;
+  margin: 1rem 0 !important;
 }
 

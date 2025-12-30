@@ -49,6 +49,15 @@ async function getAllPosts(locale, includeDrafts = false, includeScheduled = fal
             ...post,
             status: post.status || 'published'
         }));
+        // Deduplicate posts by ID (in case both .json and .md files exist for the same slug)
+        const seenIds = new Set();
+        filteredPosts = filteredPosts.filter(post => {
+            if (seenIds.has(post.id)) {
+                return false;
+            }
+            seenIds.add(post.id);
+            return true;
+        });
         // Filter by status if not including drafts
         if (!includeDrafts) {
             filteredPosts = filteredPosts.filter(post => {

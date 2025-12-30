@@ -69,7 +69,16 @@ export function createToken(username: string): string {
 export function verifyToken(token: string): { username: string } | null {
   try {
     return jwt.verify(token, SECRET) as { username: string }
-  } catch {
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError) {
+      console.error('JWT verification error:', error.message)
+    } else if (error instanceof jwt.TokenExpiredError) {
+      console.error('JWT token expired')
+    } else if (error instanceof jwt.NotBeforeError) {
+      console.error('JWT token not active yet')
+    } else {
+      console.error('JWT verification error:', error)
+    }
     return null
   }
 }

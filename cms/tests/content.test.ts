@@ -42,9 +42,9 @@ describe('content', () => {
 
     describe('getAllPosts', () => {
       it('should return all posts sorted by date descending', async () => {
-        const post1: Post = { ...mockPost, slug: 'post1', date: '2024-01-01', status: 'published' }
-        const post2: Post = { ...mockPost, slug: 'post2', date: '2024-01-02', status: 'published' }
-        const post3: Post = { ...mockPost, slug: 'post3', date: '2024-01-03', status: 'published' }
+        const post1: Post = { ...mockPost, id: '1', slug: 'post1', date: '2024-01-01', status: 'published' }
+        const post2: Post = { ...mockPost, id: '2', slug: 'post2', date: '2024-01-02', status: 'published' }
+        const post3: Post = { ...mockPost, id: '3', slug: 'post3', date: '2024-01-03', status: 'published' }
 
         mockStorage.storageList.mockResolvedValue(['post1.json', 'post2.json', 'post3.json'])
         // For each post, try .md first (returns null), then .json
@@ -70,12 +70,14 @@ describe('content', () => {
       })
 
       it('should filter out non-JSON and non-MD files', async () => {
+        const post1: Post = { ...mockPost, id: '1', slug: 'post1' }
+        const post3: Post = { ...mockPost, id: '3', slug: 'post3' }
         mockStorage.storageList.mockResolvedValue(['post1.json', 'post2.txt', 'post3.json', 'post4.md'])
         mockStorage.storageGet
           .mockResolvedValueOnce(null) // post1.md
-          .mockResolvedValueOnce(JSON.stringify(mockPost)) // post1.json
+          .mockResolvedValueOnce(JSON.stringify(post1)) // post1.json
           .mockResolvedValueOnce(null) // post3.md
-          .mockResolvedValueOnce(JSON.stringify(mockPost)) // post3.json
+          .mockResolvedValueOnce(JSON.stringify(post3)) // post3.json
           .mockResolvedValueOnce(`---
 id: post-4
 title: Markdown Post
@@ -111,16 +113,17 @@ Content`)
       })
 
       it('should skip posts that fail to load', async () => {
-        const postWithStatus = { ...mockPost, status: 'published' as const }
+        const post1: Post = { ...mockPost, id: '1', slug: 'post1', status: 'published' as const }
+        const post3: Post = { ...mockPost, id: '3', slug: 'post3', status: 'published' as const }
         mockStorage.storageList.mockResolvedValue(['post1.json', 'post2.json', 'post3.json'])
         // For each post, try .md first (returns null), then .json
         mockStorage.storageGet
           .mockResolvedValueOnce(null) // post1.md
-          .mockResolvedValueOnce(JSON.stringify(postWithStatus)) // post1.json
+          .mockResolvedValueOnce(JSON.stringify(post1)) // post1.json
           .mockResolvedValueOnce(null) // post2.md
           .mockResolvedValueOnce(null) // post2.json fails to load
           .mockResolvedValueOnce(null) // post3.md
-          .mockResolvedValueOnce(JSON.stringify(postWithStatus)) // post3.json
+          .mockResolvedValueOnce(JSON.stringify(post3)) // post3.json
 
         const result = await getAllPosts()
 
@@ -145,8 +148,8 @@ Content`)
       })
 
       it('should include draft posts when includeDrafts=true', async () => {
-        const publishedPost: Post = { ...mockPost, slug: 'published', status: 'published' }
-        const draftPost: Post = { ...mockPost, slug: 'draft', status: 'draft' }
+        const publishedPost: Post = { ...mockPost, id: '1', slug: 'published', status: 'published' }
+        const draftPost: Post = { ...mockPost, id: '2', slug: 'draft', status: 'draft' }
 
         mockStorage.storageList.mockResolvedValue(['published.json', 'draft.json'])
         mockStorage.storageGet
@@ -163,9 +166,10 @@ Content`)
       })
 
       it('should filter out scheduled posts with future dates by default', async () => {
-        const publishedPost: Post = { ...mockPost, slug: 'published', status: 'published', date: '2024-01-01T00:00:00.000Z' }
+        const publishedPost: Post = { ...mockPost, id: '1', slug: 'published', status: 'published', date: '2024-01-01T00:00:00.000Z' }
         const futureScheduledPost: Post = { 
           ...mockPost, 
+          id: '2',
           slug: 'scheduled', 
           status: 'scheduled', 
           scheduledDate: '2099-01-01T00:00:00.000Z',
@@ -173,6 +177,7 @@ Content`)
         }
         const pastScheduledPost: Post = { 
           ...mockPost, 
+          id: '3',
           slug: 'past-scheduled', 
           status: 'scheduled', 
           scheduledDate: '2020-01-01T00:00:00.000Z',

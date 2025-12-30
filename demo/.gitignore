@@ -44,6 +44,5 @@ next-env.d.ts
 # Note: public/images/ is gitignored because images should be uploaded via Blob Storage on Vercel
 # To commit a specific image, use: git add -f public/images/filename.png
 public/images/
-content/posts/**/*.json
-content/pages/**/*.json
+
 

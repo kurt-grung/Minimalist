@@ -47,15 +47,16 @@ export async function PUT(
     const token = getAuthToken(request)
     if (!token) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized', details: 'No token provided' },
         { status: 401 }
       )
     }
 
     const payload = verifyToken(token)
     if (!payload) {
+      console.error('Token verification failed. Token:', token.substring(0, 20) + '...')
       return NextResponse.json(
-        { error: 'Invalid token' },
+        { error: 'Invalid token', details: 'Token verification failed. Please log in again.' },
         { status: 401 }
       )
     }
@@ -91,15 +92,17 @@ export async function PUT(
     const saved = await saveTag(tag, locale)
     if (!saved) {
       return NextResponse.json(
-        { error: 'Failed to update tag' },
+        { error: 'Failed to update tag', details: 'Could not save tag to storage' },
         { status: 500 }
       )
     }
 
     return NextResponse.json(tag)
   } catch (error) {
+    console.error('Error in PUT /api/tags/[slug]:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
-      { error: 'Failed to update tag' },
+      { error: 'Failed to update tag', details: errorMessage },
       { status: 500 }
     )
   }
@@ -114,15 +117,16 @@ export async function DELETE(
     const token = getAuthToken(request)
     if (!token) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized', details: 'No token provided' },
         { status: 401 }
       )
     }
 
     const payload = verifyToken(token)
     if (!payload) {
+      console.error('Token verification failed. Token:', token.substring(0, 20) + '...')
       return NextResponse.json(
-        { error: 'Invalid token' },
+        { error: 'Invalid token', details: 'Token verification failed. Please log in again.' },
         { status: 401 }
       )
     }
@@ -135,15 +139,17 @@ export async function DELETE(
     const deleted = await deleteTag(slug, locale)
     if (!deleted) {
       return NextResponse.json(
-        { error: 'Tag not found' },
+        { error: 'Tag not found', details: `Tag "${slug}" not found in locale "${locale || 'default'}"` },
         { status: 404 }
       )
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    console.error('Error in DELETE /api/tags/[slug]:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
-      { error: 'Failed to delete tag' },
+      { error: 'Failed to delete tag', details: errorMessage },
       { status: 500 }
     )
   }

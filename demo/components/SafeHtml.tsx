@@ -70,11 +70,19 @@ function convertHtmlToReact(html: string): React.ReactNode {
   // Self-closing tags that don't need closing tags
   const selfClosingTags = ['br', 'hr', 'img', 'input', 'meta', 'link', 'area', 'base', 'col', 'embed', 'source', 'track', 'wbr']
   
+  // Tags that preserve whitespace
+  const whitespacePreservingTags = ['pre', 'code']
+  
   // Match all HTML tags
   const tagRegex = /<(\/?)([a-z][a-z0-9]*)\b([^>]*?)(\/?)>/gi
   let match
   let lastIndex = 0
   const stack: Array<{ tag: string; props: any; children: React.ReactNode[] }> = []
+
+  // Helper to check if we're inside a whitespace-preserving tag
+  const isInWhitespacePreservingContext = () => {
+    return stack.some(item => whitespacePreservingTags.includes(item.tag))
+  }
 
   while ((match = tagRegex.exec(html)) !== null) {
     const isClosing = match[1] === '/'
@@ -86,7 +94,8 @@ function convertHtmlToReact(html: string): React.ReactNode {
     // Add text before this tag
     if (matchIndex > lastIndex) {
       const text = html.substring(lastIndex, matchIndex)
-      if (text.trim()) {
+      const preserveWhitespace = isInWhitespacePreservingContext()
+      if (preserveWhitespace || text.trim()) {
         const textContent = decodeHtmlEntities(text)
         if (stack.length > 0) {
           stack[stack.length - 1].children.push(textContent)
@@ -132,7 +141,8 @@ function convertHtmlToReact(html: string): React.ReactNode {
   // Add remaining text
   if (lastIndex < html.length) {
     const text = html.substring(lastIndex)
-    if (text.trim()) {
+    const preserveWhitespace = isInWhitespacePreservingContext()
+    if (preserveWhitespace || text.trim()) {
       const textContent = decodeHtmlEntities(text)
       if (stack.length > 0) {
         stack[stack.length - 1].children.push(textContent)

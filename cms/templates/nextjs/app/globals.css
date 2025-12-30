@@ -80,11 +80,6 @@ input, textarea {
   line-height: 1.6;
 }
 
-.prose p {
-  margin-top: 1.25em;
-  margin-bottom: 1.25em;
-}
-
 .prose a {
   color: #0070f3;
   text-decoration: underline;

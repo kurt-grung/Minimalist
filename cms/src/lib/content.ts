@@ -66,6 +66,16 @@ export async function getAllPosts(locale?: string, includeDrafts: boolean = fals
       status: post.status || 'published'
     }))
     
+    // Deduplicate posts by ID (in case both .json and .md files exist for the same slug)
+    const seenIds = new Set<string>()
+    filteredPosts = filteredPosts.filter(post => {
+      if (seenIds.has(post.id)) {
+        return false
+      }
+      seenIds.add(post.id)
+      return true
+    })
+    
     // Filter by status if not including drafts
     if (!includeDrafts) {
       filteredPosts = filteredPosts.filter(post => {
