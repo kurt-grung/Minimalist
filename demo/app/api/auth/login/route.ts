@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUser, verifyPassword, createToken, initDefaultUser } from '@/lib/auth'
+import { getUser, verifyPassword, createToken, initDefaultUser, getUserRole } from '@/lib/auth'
 
 // Note: API routes only work in development mode
 // For production static builds, you'll need a separate server or build scripts
@@ -32,9 +32,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const token = createToken(username)
+    const role = getUserRole(username)
+    const token = createToken(username, role)
 
-    return NextResponse.json({ token })
+    return NextResponse.json({ token, username, role })
   } catch (error) {
     console.error('Login error:', error)
     // Check if it's a file system error (common on serverless platforms)

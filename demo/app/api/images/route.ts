@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import fs from 'fs'
 import path from 'path'
+import sharp from 'sharp'
 
 function getAuthToken(request: NextRequest): string | null {
   const authHeader = request.headers.get('authorization')
@@ -25,6 +26,67 @@ async function getBlobClient() {
   } catch (error) {
     console.warn('Vercel Blob not available, falling back to file system:', error)
     return null
+  }
+}
+
+// Image optimization helper
+async function optimizeImage(buffer: Buffer, mimeType: string): Promise<{ buffer: Buffer; mimeType: string; size: number }> {
+  try {
+    const image = sharp(buffer)
+    const metadata = await image.metadata()
+    
+    // Skip SVG files (they're already optimized)
+    if (mimeType === 'image/svg+xml') {
+      return { buffer, mimeType, size: buffer.length }
+    }
+    
+    // Resize if image is too large (max width 1920px, max height 1920px)
+    const maxDimension = 1920
+    let processedImage = image
+    
+    if (metadata.width && metadata.width > maxDimension) {
+      processedImage = processedImage.resize(maxDimension, null, { withoutEnlargement: true })
+    } else if (metadata.height && metadata.height > maxDimension) {
+      processedImage = processedImage.resize(null, maxDimension, { withoutEnlargement: true })
+    }
+    
+    // Convert to WebP for better compression (except GIF which should stay animated)
+    let outputFormat: 'webp' | 'jpeg' | 'png' | 'gif' = 'webp'
+    let outputMimeType = 'image/webp'
+    
+    if (mimeType === 'image/gif') {
+      outputFormat = 'gif'
+      outputMimeType = 'image/gif'
+    } else if (mimeType === 'image/png' && metadata.hasAlpha) {
+      // Keep PNG if it has transparency
+      outputFormat = 'png'
+      outputMimeType = 'image/png'
+    }
+    
+    // Optimize based on format
+    let optimizedBuffer: Buffer
+    if (outputFormat === 'webp') {
+      optimizedBuffer = await processedImage
+        .webp({ quality: 85, effort: 6 })
+        .toBuffer()
+    } else if (outputFormat === 'png') {
+      optimizedBuffer = await processedImage
+        .png({ quality: 85, compressionLevel: 9 })
+        .toBuffer()
+    } else {
+      // GIF - just resize if needed, keep as-is
+      optimizedBuffer = await processedImage.toBuffer()
+    }
+    
+    return {
+      buffer: optimizedBuffer,
+      mimeType: outputMimeType,
+      size: optimizedBuffer.length
+    }
+  } catch (error) {
+    console.error('Image optimization error:', error)
+    // Return original if optimization fails
+    return { buffer, mimeType, size: buffer.length }
   }
 }
 
@@ -144,11 +206,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate unique filename
+    // Get file buffer
+    const bytes = await file.arrayBuffer()
+    const originalBuffer = Buffer.from(bytes)
+    
+    // Optimize image (resize and compress)
+    const { buffer: optimizedBuffer, mimeType: optimizedMimeType, size: optimizedSize } = await optimizeImage(originalBuffer, file.type)
+    
+    // Generate unique filename with appropriate extension
     const timestamp = Date.now()
     const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-    const ext = path.extname(originalName) || '.jpg'
-    const filename = `${timestamp}-${originalName.replace(ext, '')}${ext}`
+    const originalExt = path.extname(originalName)
+    
+    // Use appropriate extension based on optimized format
+    let ext = originalExt
+    if (optimizedMimeType === 'image/webp') {
+      ext = '.webp'
+    } else if (optimizedMimeType === 'image/jpeg') {
+      ext = '.jpg'
+    } else if (optimizedMimeType === 'image/png') {
+      ext = '.png'
+    } else if (optimizedMimeType === 'image/gif') {
+      ext = '.gif'
+    }
+    
+    const filename = `${timestamp}-${originalName.replace(originalExt, '')}${ext}`
 
     // Try Blob Storage first if available (production on Vercel)
     if (USE_BLOB) {
@@ -156,20 +238,21 @@ export async function POST(request: NextRequest) {
       if (blob) {
         try {
           const { put } = blob
-          const bytes = await file.arrayBuffer()
-          const buffer = Buffer.from(bytes)
           
-          const blobResult = await put(`images/${filename}`, buffer, {
+          const blobResult = await put(`images/${filename}`, optimizedBuffer, {
             access: 'public',
-            contentType: file.type,
+            contentType: optimizedMimeType,
           })
           
-          console.log(`Image saved to Vercel Blob Storage: ${blobResult.url}`)
+          const compressionRatio = ((1 - optimizedSize / file.size) * 100).toFixed(1)
+          console.log(`Image optimized and saved to Vercel Blob Storage: ${blobResult.url} (${compressionRatio}% reduction)`)
           
           return NextResponse.json({
             filename,
             url: blobResult.url, // Use Blob URL directly
-            size: file.size
+            size: optimizedSize,
+            originalSize: file.size,
+            compressionRatio: parseFloat(compressionRatio)
           }, { status: 201 })
         } catch (error) {
           console.error('Blob upload error:', error)
@@ -190,22 +273,22 @@ export async function POST(request: NextRequest) {
     const filePath = path.join(absoluteImagesDir, filename)
     const absoluteFilePath = path.resolve(filePath)
     
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    
-    fs.writeFileSync(absoluteFilePath, buffer)
+    fs.writeFileSync(absoluteFilePath, optimizedBuffer)
     
     if (!fs.existsSync(absoluteFilePath)) {
       throw new Error('File was not saved to local file system')
     }
     
     const stats = fs.statSync(absoluteFilePath)
-    console.log(`Image saved to local file system: ${absoluteFilePath} (${stats.size} bytes)`)
+    const compressionRatio = ((1 - optimizedSize / file.size) * 100).toFixed(1)
+    console.log(`Image optimized and saved to local file system: ${absoluteFilePath} (${stats.size} bytes, ${compressionRatio}% reduction)`)
 
     return NextResponse.json({
       filename,
       url: `/images/${filename}`,
-      size: file.size
+      size: optimizedSize,
+      originalSize: file.size,
+      compressionRatio: parseFloat(compressionRatio)
     }, { status: 201 })
   } catch (error) {
     console.error('Error uploading image:', error)

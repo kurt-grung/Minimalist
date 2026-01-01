@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
+import CustomSelect from './CustomSelect'
 
 interface Locale {
   code: string
@@ -64,39 +65,44 @@ export default function LocaleSelector({ locales, currentLocale, defaultLocale, 
   }
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: '0.5rem',
-      marginBottom: '1rem'
-    }}>
-      <label style={{ 
-        fontSize: '0.9rem', 
-        fontWeight: '500',
-        color: '#666'
-      }}>
-        Language:
-      </label>
-      <select
-        value={selectedLocale}
-        onChange={handleLocaleChange}
-        style={{
-          padding: '0.5rem 0.75rem',
-          border: '1px solid #ddd',
-          borderRadius: '6px',
-          fontSize: '0.9rem',
-          backgroundColor: 'white',
-          cursor: 'pointer',
-          color: '#333'
-        }}
-      >
-        {enabledLocales.map((locale) => (
-          <option key={locale.code} value={locale.code}>
-            {locale.name} ({locale.code})
-          </option>
-        ))}
-      </select>
-    </div>
+    <CustomSelect
+      value={selectedLocale}
+      onChange={(newLocale) => {
+        setSelectedLocale(newLocale)
+        // Build new URL with locale as path segment
+        let newPath = currentPath || pathname
+        
+        // Remove existing locale from path if present
+        const enabledLocaleCodes = locales.filter(l => l.enabled).map(l => l.code)
+        const pathSegments = newPath.split('/').filter(Boolean)
+        
+        // Remove locale if it's the first segment
+        if (pathSegments.length > 0 && enabledLocaleCodes.includes(pathSegments[0])) {
+          pathSegments.shift()
+        }
+        
+        // Build new path
+        if (newLocale === defaultLocale) {
+          // Default locale: no locale prefix
+          newPath = pathSegments.length > 0 ? `/${pathSegments.join('/')}` : '/'
+        } else {
+          // Non-default locale: add locale prefix
+          newPath = pathSegments.length > 0 
+            ? `/${newLocale}/${pathSegments.join('/')}`
+            : `/${newLocale}`
+        }
+        
+        router.push(newPath)
+        // Reload the page to show content in the new locale
+        router.refresh()
+      }}
+      options={enabledLocales.map(locale => ({
+        value: locale.code,
+        label: locale.code.toUpperCase()
+      }))}
+      title="Select language"
+      ariaLabel="Select language"
+    />
   )
 }
 

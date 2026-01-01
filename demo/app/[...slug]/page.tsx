@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Footer from '@/components/Footer'
 import EditButton from '@/components/EditButton'
 import LocaleSelector from '@/components/LocaleSelector'
+import ThemeToggle from '@/components/ThemeToggle'
 import SafeHtml from '@/components/SafeHtml'
 import { markdownToHtml, processMarkdownInHtml } from '@/lib/markdown'
 
@@ -237,33 +238,52 @@ export default async function DynamicContentPage({
       return (
         <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
           <header style={{ marginBottom: '3rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-              <div style={{ flex: 1 }}>
-                <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>{siteTitle}</h1>
-                <p style={{ fontSize: '1.2rem', color: '#666' }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'flex-start', 
+              marginBottom: '1rem',
+              flexWrap: 'wrap',
+              gap: '1rem'
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h1 style={{ 
+                  fontSize: 'clamp(1.5rem, 5vw, 3rem)', 
+                  marginBottom: '1rem',
+                  whiteSpace: 'nowrap',
+                  lineHeight: '1.2'
+                }}>{siteTitle}</h1>
+                <p style={{ fontSize: '1.2rem', color: '#666' }} className="dark:text-gray-400">
                   {siteSubtitle}
                 </p>
               </div>
-              <LocaleSelector 
-                locales={config.locales || []} 
-                currentLocale={locale}
-                defaultLocale={config.defaultLocale || 'en'}
-              />
+              <div style={{ 
+                display: 'flex', 
+                gap: '0.75rem', 
+                alignItems: 'center',
+                flexShrink: 0
+              }}>
+                <ThemeToggle />
+                <LocaleSelector 
+                  locales={config.locales || []} 
+                  currentLocale={locale}
+                  defaultLocale={config.defaultLocale || 'en'}
+                />
+              </div>
             </div>
           </header>
 
           <section>
-            <h2 style={{ marginBottom: '2rem', fontSize: '2rem' }}>Latest Posts</h2>
+            <h2 className="dark:text-gray-100" style={{ marginBottom: '2rem', fontSize: '2rem' }}>Latest Posts</h2>
             
             {posts.length === 0 ? (
-              <div style={{ 
+              <div className="bg-white dark:bg-gray-800" style={{ 
                 padding: '2rem', 
-                background: 'white', 
                 borderRadius: '8px',
                 textAlign: 'center',
                 color: '#666'
               }}>
-                <p>No posts yet. Create your first post in the admin panel!</p>
+                <p className="dark:text-gray-400">No posts yet. Create your first post in the admin panel!</p>
               </div>
             ) : (
               <div style={{ display: 'grid', gap: '1.5rem' }}>
@@ -274,26 +294,26 @@ export default async function DynamicContentPage({
                       ? (locale !== config.defaultLocale ? `/${locale}/${postRoute}/${post.slug}` : `/${postRoute}/${post.slug}`)
                       : (locale !== config.defaultLocale ? `/${locale}/${post.slug}` : `/${post.slug}`)
                     }
-                    className="post-card"
+                    className="post-card bg-white dark:bg-gray-800"
                     style={{
                       display: 'block',
                       padding: '2rem',
-                      background: 'white',
                       borderRadius: '8px',
                       boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                       transition: 'transform 0.2s, box-shadow 0.2s'
                     }}
                   >
-                    <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
+                    <h3 className="dark:text-gray-100" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
                       {post.title}
                     </h3>
                     {post.excerpt && (
                       <SafeHtml 
                         html={post.excerpt}
+                        className="dark:text-gray-400"
                         style={{ color: '#666', marginBottom: '0.5rem' }}
                       />
                     )}
-                    <time style={{ color: '#999', fontSize: '0.9rem' }}>
+                    <time className="dark:text-gray-500" style={{ color: '#999', fontSize: '0.9rem' }}>
                       {new Date(post.date).toLocaleDateString()}
                     </time>
                   </Link>
@@ -406,33 +426,36 @@ export default async function DynamicContentPage({
             📅 SCHEDULED - This post will be published on {new Date(post.scheduledDate).toLocaleString()}
           </div>
         )}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
           <Link 
             href={homeUrl}
+            className="text-blue-600 dark:text-blue-400 hover:underline"
             style={{ 
-              color: '#0070f3',
               textDecoration: 'underline'
             }}
           >
             ← Back to home
           </Link>
-          <LocaleSelector 
-            locales={config.locales || []} 
-            currentLocale={displayLocale}
-            defaultLocale={config.defaultLocale || 'en'}
-            currentPath={`/${actualSlug}`}
-          />
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <ThemeToggle />
+            <LocaleSelector 
+              locales={config.locales || []} 
+              currentLocale={displayLocale}
+              defaultLocale={config.defaultLocale || 'en'}
+              currentPath={`/${actualSlug}`}
+            />
+          </div>
         </div>
 
-        <article style={{ background: 'white', padding: '3rem', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <article className="bg-white dark:bg-gray-800" style={{ padding: '3rem', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
           <header style={{ marginBottom: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-              <h1 style={{ fontSize: '2.5rem', margin: 0, flex: 1 }}>
+              <h1 className="text-gray-900 dark:text-gray-100" style={{ fontSize: '2.5rem', margin: 0, flex: 1 }}>
                 {post.title}
               </h1>
               <EditButton slug={actualSlug} contentType="post" />
             </div>
-            <div style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            <div className="text-gray-600 dark:text-gray-400" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
               <time>{new Date(post.date).toLocaleDateString()}</time>
               {post.author && <span> • By {post.author}</span>}
             </div>
@@ -451,12 +474,12 @@ export default async function DynamicContentPage({
 
           {/* Categories and Tags at bottom */}
           {(categories.filter(c => c !== null).length > 0 || tags.filter(t => t !== null).length > 0) && (
-            <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid #e0e0e0' }}>
+            <div className="border-t border-gray-300 dark:border-gray-600" style={{ marginTop: '3rem', paddingTop: '2rem' }}>
               {/* Categories */}
               {categories.filter(c => c !== null).length > 0 && (
                 <div style={{ marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.9rem', color: '#666', marginRight: '0.5rem', fontWeight: '500' }}>Categories:</span>
+                    <span className="text-gray-600 dark:text-gray-400" style={{ fontSize: '0.9rem', marginRight: '0.5rem', fontWeight: '500' }}>Categories:</span>
                     {categories.filter(c => c !== null).map((category) => (
                       <Link
                         key={category!.id}
@@ -482,7 +505,7 @@ export default async function DynamicContentPage({
               {tags.filter(t => t !== null).length > 0 && (
                 <div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.9rem', color: '#666', marginRight: '0.5rem', fontWeight: '500' }}>Tags:</span>
+                    <span className="text-gray-600 dark:text-gray-400" style={{ fontSize: '0.9rem', marginRight: '0.5rem', fontWeight: '500' }}>Tags:</span>
                     {tags.filter(t => t !== null).map((tag) => (
                       <Link
                         key={tag!.id}
@@ -520,22 +543,25 @@ export default async function DynamicContentPage({
   const homeUrl = displayLocale !== config.defaultLocale ? `/${displayLocale}` : '/'
   return (
     <main style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <Link 
           href={homeUrl}
+          className="text-blue-600 dark:text-blue-400 hover:underline"
           style={{ 
-            color: '#0070f3',
             textDecoration: 'underline'
           }}
         >
           ← Back to home
         </Link>
-        <LocaleSelector 
-          locales={config.locales || []} 
-          currentLocale={displayLocale}
-          defaultLocale={config.defaultLocale || 'en'}
-          currentPath={`/${actualSlug}`}
-        />
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <ThemeToggle />
+          <LocaleSelector 
+            locales={config.locales || []} 
+            currentLocale={displayLocale}
+            defaultLocale={config.defaultLocale || 'en'}
+            currentPath={`/${actualSlug}`}
+          />
+        </div>
       </div>
 
       <article style={{ background: 'white', padding: '3rem', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import ThemeToggle from './ThemeToggle'
 
 export default function Footer() {
   const [isLocalhost, setIsLocalhost] = useState(false)
@@ -20,11 +21,11 @@ export default function Footer() {
       paddingTop: '2rem', 
       textAlign: 'center'
     }}>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem', alignItems: 'center' }}>
         <Link 
           href="/feed.xml" 
+          className="text-blue-600 dark:text-blue-400 hover:underline"
           style={{ 
-            color: '#0070f3',
             textDecoration: 'none',
             fontSize: '0.9rem'
           }}
@@ -34,8 +35,8 @@ export default function Footer() {
         {isLocalhost && (
           <Link 
             href="/admin" 
+            className="text-blue-600 dark:text-blue-400 hover:underline"
             style={{ 
-              color: '#0070f3',
               textDecoration: 'none',
               fontSize: '0.9rem'
             }}
@@ -43,8 +44,9 @@ export default function Footer() {
             Admin Panel
           </Link>
         )}
+        <ThemeToggle />
       </div>
-      <p style={{ margin: '0', color: '#666', fontSize: '0.9rem' }}>
+      <p style={{ margin: '0', color: '#666', fontSize: '0.9rem' }} className="dark:text-gray-400">
         Powered by Minimalist
       </p>
     </footer>

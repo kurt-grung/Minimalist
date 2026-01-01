@@ -455,6 +455,132 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Backup & Export Section */}
+        <div style={{ 
+          marginTop: '2rem', 
+          padding: '1.5rem', 
+          background: 'white', 
+          borderRadius: '8px',
+          border: '1px solid #ddd'
+        }}>
+          <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem', fontWeight: '600' }}>
+            Backup & Export
+          </h2>
+          <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>
+            Export all your content as JSON for backup or import it back later.
+          </p>
+          
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const token = localStorage.getItem('admin_token')
+                  if (!token) {
+                    alert('Not authenticated')
+                    return
+                  }
+
+                  const response = await fetch('/api/backup/export', {
+                    headers: {
+                      'Authorization': `Bearer ${token}`
+                    }
+                  })
+
+                  if (response.ok) {
+                    const blob = await response.blob()
+                    const url = window.URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `cms-backup-${new Date().toISOString().split('T')[0]}.json`
+                    document.body.appendChild(a)
+                    a.click()
+                    window.URL.revokeObjectURL(url)
+                    document.body.removeChild(a)
+                    alert('Backup exported successfully!')
+                  } else {
+                    const data = await response.json()
+                    alert(data.error || 'Failed to export backup')
+                  }
+                } catch (error) {
+                  alert('Error exporting backup: ' + (error instanceof Error ? error.message : 'Unknown error'))
+                }
+              }}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: '#0070f3',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                cursor: 'pointer'
+              }}
+            >
+              📥 Export Backup
+            </button>
+            
+            <label
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                display: 'inline-block'
+              }}
+            >
+              📤 Import Backup
+              <input
+                type="file"
+                accept=".json"
+                style={{ display: 'none' }}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+
+                  try {
+                    const token = localStorage.getItem('admin_token')
+                    if (!token) {
+                      alert('Not authenticated')
+                      return
+                    }
+
+                    const text = await file.text()
+                    const backup = JSON.parse(text)
+
+                    if (!confirm('This will import all content from the backup. Existing content with the same slugs will be overwritten. Continue?')) {
+                      return
+                    }
+
+                    const response = await fetch('/api/backup/import', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                      },
+                      body: JSON.stringify(backup)
+                    })
+
+                    const data = await response.json()
+                    if (response.ok) {
+                      alert(`Import successful! ${data.message}`)
+                      router.refresh()
+                    } else {
+                      alert(data.error || 'Failed to import backup')
+                    }
+                  } catch (error) {
+                    alert('Error importing backup: ' + (error instanceof Error ? error.message : 'Unknown error'))
+                  }
+                  
+                  e.target.value = ''
+                }}
+              />
+            </label>
+          </div>
+        </div>
+
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
           <Link
             href="/admin/dashboard"

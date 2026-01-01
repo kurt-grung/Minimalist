@@ -7,6 +7,7 @@ import SafeHtml from '@/components/SafeHtml'
 import PostImagePreview from '@/components/PostImagePreview'
 import Pagination from '@/components/Pagination'
 import SearchBar from '@/components/SearchBar'
+import ThemeToggle from '@/components/ThemeToggle'
 
 // Extract first image URL from HTML or Markdown content
 function extractFirstImage(content: string): string | null {
@@ -52,18 +53,38 @@ export default async function Home({
   return (
     <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
       <header style={{ marginBottom: '3rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-          <div style={{ flex: 1 }}>
-            <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>{siteTitle}</h1>
-            <p style={{ fontSize: '1.2rem', color: '#666' }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'flex-start', 
+          marginBottom: '1rem',
+          flexWrap: 'wrap',
+          gap: '1rem'
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={{ 
+              fontSize: 'clamp(1.5rem, 5vw, 3rem)', 
+              marginBottom: '1rem',
+              whiteSpace: 'nowrap',
+              lineHeight: '1.2'
+            }}>{siteTitle}</h1>
+            <p style={{ fontSize: '1.2rem', color: '#666' }} className="dark:text-gray-400">
               {siteSubtitle}
             </p>
           </div>
-          <LocaleSelector 
-            locales={config.locales || []} 
-            currentLocale={locale}
-            defaultLocale={config.defaultLocale || 'en'}
-          />
+          <div style={{ 
+            display: 'flex', 
+            gap: '0.75rem', 
+            alignItems: 'center',
+            flexShrink: 0
+          }}>
+            <ThemeToggle />
+            <LocaleSelector 
+              locales={config.locales || []} 
+              currentLocale={locale}
+              defaultLocale={config.defaultLocale || 'en'}
+            />
+          </div>
         </div>
         <div style={{ marginTop: '1.5rem' }}>
           <SearchBar 

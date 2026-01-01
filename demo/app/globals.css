@@ -24,6 +24,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: linear-gradient(1turn, #b0f7bae6 -35.34%, #899cfa8a 17.78%, #ac75ff45 72.93%, #ac75ff00);
   min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark body {
+  background: linear-gradient(1turn, #1a1a2e -35.34%, #16213e 17.78%, #0f3460 72.93%, #0a0e1a);
+  color: #e5e7eb;
 }
 
 a {
@@ -36,8 +42,65 @@ button {
   font-family: inherit;
 }
 
-input, textarea {
+input, textarea, select {
   font-family: inherit;
+}
+
+/* Select styling - remove all default browser styles */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: none;
+}
+
+select::-ms-expand {
+  display: none;
+}
+
+/* Style select options - limited browser support */
+select option {
+  background-color: white !important;
+  color: #1f2937 !important;
+  padding: 0.5rem 0.75rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  text-align: center !important;
+  font-family: inherit !important;
+  border: none !important;
+  border-radius: 4px !important;
+}
+
+.dark select option {
+  background-color: #1f2937 !important;
+  color: #e5e7eb !important;
+}
+
+/* Style selected/highlighted option */
+select option:checked,
+select option[selected] {
+  background-color: #0070f3 !important;
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+.dark select option:checked,
+.dark select option[selected] {
+  background-color: #3b82f6 !important;
+  color: white !important;
+}
+
+/* Style option on hover/focus (limited support) */
+select option:hover,
+select option:focus {
+  background-color: #f3f4f6 !important;
+  color: #1f2937 !important;
+}
+
+.dark select option:hover,
+.dark select option:focus {
+  background-color: #374151 !important;
+  color: #e5e7eb !important;
 }
 
 .post-card {
@@ -77,6 +140,10 @@ input, textarea {
 /* Rich text content styles */
 .prose {
   color: #333;
+}
+
+.dark .prose {
+  color: #e5e7eb;
 }
 
 .prose h1 {
