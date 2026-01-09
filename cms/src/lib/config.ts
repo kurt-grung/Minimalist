@@ -86,4 +86,3 @@ export function getLocaleByCode(code: string): Locale | undefined {
   const config = getConfig()
   return config.locales.find(locale => locale.code === code)
 }
-
